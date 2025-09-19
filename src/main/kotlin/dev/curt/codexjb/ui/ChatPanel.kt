@@ -157,4 +157,6 @@ class ChatPanel(
         transcript.revalidate()
         transcript.repaint()
     }
+
+    internal fun transcriptCount(): Int = transcript.componentCount
 }

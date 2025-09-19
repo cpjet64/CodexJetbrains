@@ -30,9 +30,10 @@ class ChatPanelTest {
             effortProvider = { "medium" },
             cwdProvider = { Paths.get("/work") }
         )
+        val before = panel.transcriptCount()
         SwingUtilities.invokeAndWait { panel.submit("Hello") }
+        assertTrue(panel.transcriptCount() > before)
         assertTrue(sent.first().contains("\"UserMessage\""))
         assertEquals(1, turns.size())
     }
 }
-
