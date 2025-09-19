@@ -75,7 +75,7 @@ Execution Order
 - [x] [T4.12] Add warning banner for Full Access mode.
 
 ## T5. Diff preview and apply
-- [ ] [T5.1] Parse TurnDiff unified diff to file hunks.
+- [x] [T5.1] Parse TurnDiff unified diff to file hunks.
 - [ ] [T5.2] Render two-pane diff viewer for each file.
 - [ ] [T5.3] Show file tree with checkboxes to include/exclude files.
 - [ ] [T5.4] Apply patch using WriteCommandAction edits.
