@@ -77,8 +77,11 @@ class ChatPanel(
     }
 
     internal fun submit(text: String) {
+        submitWithId(text, Ids.newId())
+    }
+
+    internal fun submitWithId(text: String, id: String) {
         if (send.isEnabled.not()) return
-        val id = Ids.newId()
         val model = modelProvider()
         val effort = effortProvider()
         renderUserBubble(text)

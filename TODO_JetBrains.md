@@ -49,8 +49,8 @@ Execution Order
 ## T3. ToolWindow UI and chat basics
 - [x] [T3.1] Create ToolWindow with input box and send button.
 - [x] [T3.2] Render user bubble on submit.
-- [ ] [T3.3] Append AgentMessageDelta tokens live.
-- [ ] [T3.4] Seal message on AgentMessage final event.
+- [x] [T3.3] Append AgentMessageDelta tokens live.
+- [x] [T3.4] Seal message on AgentMessage final event.
 - [ ] [T3.5] Add clear chat action; confirm before clearing.
 - [ ] [T3.6] Add copy message to clipboard action.
 - [ ] [T3.7] Add model and reasoning selectors in header.
