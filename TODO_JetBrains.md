@@ -44,7 +44,7 @@ Execution Order
 - [x] [T2.9] Record SessionConfigured; show session header.
 - [x] [T2.10] Collect TokenCount; update usage indicators.
 - [x] [T2.11] Persist last session rollout_path in logs.
-- [ ] [T2.12] Unit test correlation logic with fake stream.
+- [x] [T2.12] Unit test correlation logic with fake stream.
 
 ## T3. ToolWindow UI and chat basics
 - [ ] [T3.1] Create ToolWindow with input box and send button.
