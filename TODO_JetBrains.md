@@ -76,8 +76,8 @@ Execution Order
 
 ## T5. Diff preview and apply
 - [x] [T5.1] Parse TurnDiff unified diff to file hunks.
-- [ ] [T5.2] Render two-pane diff viewer for each file.
-- [ ] [T5.3] Show file tree with checkboxes to include/exclude files.
+- [x] [T5.2] Render two-pane diff viewer for each file.
+- [x] [T5.3] Show file tree with checkboxes to include/exclude files.
 - [ ] [T5.4] Apply patch using WriteCommandAction edits.
 - [ ] [T5.5] On PatchApplyBegin show progress bar.
 - [ ] [T5.6] On PatchApplyEnd show success or failure summary.
