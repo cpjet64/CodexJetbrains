@@ -89,16 +89,16 @@ Execution Order
 - [ ] [T5.12] Telemetry counters for apply success/failure.
 
 ## T6. Exec command streaming
-- [ ] [T6.1] Create console pane for ExecCommandBegin events.
-- [ ] [T6.2] Append ExecCommandOutputDelta chunks to console.
-- [ ] [T6.3] On ExecCommandEnd print exit code and duration.
-- [ ] [T6.4] Honor cwd; show it in console header.
+- [x] [T6.1] Create console pane for ExecCommandBegin events.
+- [x] [T6.2] Append ExecCommandOutputDelta chunks to console.
+- [x] [T6.3] On ExecCommandEnd print exit code and duration.
+- [x] [T6.4] Honor cwd; show it in console header.
 - [ ] [T6.5] Add Kill process action to send cancel (if supported).
 - [ ] [T6.6] Write ANSI color handling for basic codes.
-- [ ] [T6.7] Allow copy all to clipboard from console.
+- [x] [T6.7] Allow copy all to clipboard from console.
 - [ ] [T6.8] Option to auto-open console on exec start.
 - [ ] [T6.9] Limit buffer size to avoid memory pressure.
-- [ ] [T6.10] Unit test console with canned output events.
+- [x] [T6.10] Unit test console with canned output events.
 - [ ] [T6.11] Persist console visibility across sessions.
 - [ ] [T6.12] Show approval decision status in console header.
 
