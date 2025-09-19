@@ -35,7 +35,7 @@ Execution Order
 ## T2. Protocol client and correlation
 - [x] [T2.1] Model Submission and Event envelopes (id, op; id, msg).
 - [x] [T2.2] Implement UUID id creation helper.
-- [ ] [T2.3] Add listener registry for JSON events.
+- [x] [T2.3] Add listener registry for JSON events.
 - [ ] [T2.4] Implement tolerant JSON parsing with try/catch.
 - [ ] [T2.5] Add in-flight map id→turn; expire on TaskComplete.
 - [ ] [T2.6] Render StreamError and Error banners in panel.
