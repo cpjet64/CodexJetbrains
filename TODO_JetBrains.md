@@ -38,7 +38,7 @@ Execution Order
 - [x] [T2.3] Add listener registry for JSON events.
 - [x] [T2.4] Implement tolerant JSON parsing with try/catch.
 - [x] [T2.5] Add in-flight map id→turn; expire on TaskComplete.
-- [ ] [T2.6] Render StreamError and Error banners in panel.
+- [x] [T2.6] Render StreamError and Error banners in panel.
 - [ ] [T2.7] Implement heartbeat ping (optional no-op submission).
 - [ ] [T2.8] Add retry on broken pipe; show reconnect UI.
 - [ ] [T2.9] Record SessionConfigured; show session header.
