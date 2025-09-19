@@ -49,8 +49,10 @@ class ChatPanel(
         input.lineWrap = true
         input.wrapStyleWord = true
         input.toolTipText = "Ask Codex"
+        input.accessibleContext.accessibleName = "Codex input"
         send.addActionListener(this::onSend)
         send.toolTipText = "Send to Codex"
+        send.accessibleContext.accessibleName = "Send"
         clear.addActionListener {
             val res = JOptionPane.showConfirmDialog(
                 this,
@@ -64,6 +66,8 @@ class ChatPanel(
         controls.add(send)
         controls.add(spinner)
         controls.add(clear)
+        spinner.accessibleContext.accessibleName = "Streaming"
+        clear.accessibleContext.accessibleName = "Clear chat"
         panel.add(JScrollPane(input), BorderLayout.CENTER)
         panel.add(controls, BorderLayout.EAST)
         return panel

@@ -57,7 +57,7 @@ Execution Order
 - [x] [T3.8] Persist last model/effort to settings.
 - [x] [T3.9] Disable Send while a turn is active.
 - [x] [T3.10] Show spinner while streaming.
-- [ ] [T3.11] Add accessibility labels for controls.
+- [x] [T3.11] Add accessibility labels for controls.
 - [ ] [T3.12] Write UI tests for basic flows.
 
 ## T4. Context and approvals

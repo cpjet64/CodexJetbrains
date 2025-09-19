@@ -44,6 +44,8 @@ class CodexToolWindowFactory : ToolWindowFactory {
       add(JLabel("Effort:"))
       add(effortCombo)
     }
+    modelCombo.accessibleContext.accessibleName = "Model selector"
+    effortCombo.accessibleContext.accessibleName = "Effort selector"
     modelCombo.addActionListener { cfg.lastModel = modelCombo.selectedItem as String }
     effortCombo.addActionListener { cfg.lastEffort = effortCombo.selectedItem as String }
     val sender = ProtoSender(
