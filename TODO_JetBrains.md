@@ -51,7 +51,7 @@ Execution Order
 - [x] [T3.2] Render user bubble on submit.
 - [x] [T3.3] Append AgentMessageDelta tokens live.
 - [x] [T3.4] Seal message on AgentMessage final event.
-- [ ] [T3.5] Add clear chat action; confirm before clearing.
+- [x] [T3.5] Add clear chat action; confirm before clearing.
 - [ ] [T3.6] Add copy message to clipboard action.
 - [ ] [T3.7] Add model and reasoning selectors in header.
 - [ ] [T3.8] Persist last model/effort to settings.

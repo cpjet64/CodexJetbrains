@@ -38,6 +38,32 @@ class ChatPanelTest {
     }
 
     @Test
+    fun clearTranscriptRemovesMessages() {
+        val bus = EventBus()
+        val turns = TurnRegistry()
+        val sender = ProtoSender(
+            backend = object : SenderBackend {
+                override fun start(config: dev.curt.codexjb.core.CodexProcessConfig, restart: Boolean) = true
+                override fun send(line: String) {}
+            },
+            config = dev.curt.codexjb.core.CodexProcessConfig(Paths.get("/usr/bin/codex")),
+            log = object : LogSink { override fun info(message: String) {}; override fun warn(message: String) {}; override fun error(message: String, t: Throwable?) {} }
+        )
+        val panel = ChatPanel(
+            sender = sender,
+            bus = bus,
+            turns = turns,
+            modelProvider = { "gpt-4.1-mini" },
+            effortProvider = { "medium" },
+            cwdProvider = { Paths.get("/work") }
+        )
+        SwingUtilities.invokeAndWait { panel.submit("Hello") }
+        assertTrue(panel.transcriptCount() > 0)
+        SwingUtilities.invokeAndWait { panel.clearTranscript() }
+        assertEquals(0, panel.transcriptCount())
+    }
+
+    @Test
     fun appendsAgentDeltaAndSealsOnFinal() {
         val bus = EventBus()
         val turns = TurnRegistry()

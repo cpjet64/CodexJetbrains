@@ -49,7 +49,15 @@ class ChatPanel(
         input.toolTipText = "Ask Codex"
         send.addActionListener(this::onSend)
         send.toolTipText = "Send to Codex"
-        clear.addActionListener { clearTranscript() }
+        clear.addActionListener {
+            val res = JOptionPane.showConfirmDialog(
+                this,
+                "Clear chat?",
+                "Confirm",
+                JOptionPane.YES_NO_OPTION
+            )
+            if (res == JOptionPane.YES_OPTION) clearTranscript()
+        }
         clear.toolTipText = "Clear chat"
         controls.add(send)
         controls.add(clear)
