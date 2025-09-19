@@ -61,17 +61,17 @@ Execution Order
 - [x] [T3.12] Write UI tests for basic flows.
 
 ## T4. Context and approvals
-- [ ] [T4.1] Implement OverrideTurnContext with cwd/model/effort.
-- [ ] [T4.2] Wire approval policy toggle (Chat/Agent/Full Access).
-- [ ] [T4.3] On ExecApprovalRequest show modal with command and cwd.
-- [ ] [T4.4] Reply ExecApproval with decision and remember for session.
-- [ ] [T4.5] On ApplyPatchApprovalRequest show changed files list.
-- [ ] [T4.6] Reply PatchApproval with decision and rationale note.
-- [ ] [T4.7] Store per-session approval decisions in memory.
-- [ ] [T4.8] Expose a 'Reset approvals' action in panel.
-- [ ] [T4.9] Log denied approvals with reason code.
-- [ ] [T4.10] Unit test approval request→response mapping.
-- [ ] [T4.11] Persist last approval mode to settings.
+- [x] [T4.1] Implement OverrideTurnContext with cwd/model/effort.
+- [x] [T4.2] Wire approval policy toggle (Chat/Agent/Full Access).
+- [x] [T4.3] On ExecApprovalRequest show modal with command and cwd.
+- [x] [T4.4] Reply ExecApproval with decision and remember for session.
+- [x] [T4.5] On ApplyPatchApprovalRequest show changed files list.
+- [x] [T4.6] Reply PatchApproval with decision and rationale note.
+- [x] [T4.7] Store per-session approval decisions in memory.
+- [x] [T4.8] Expose a 'Reset approvals' action in panel.
+- [x] [T4.9] Log denied approvals with reason code.
+- [x] [T4.10] Unit test approval request→response mapping.
+- [x] [T4.11] Persist last approval mode to settings.
 - [ ] [T4.12] Add warning banner for Full Access mode.
 
 ## T5. Diff preview and apply

@@ -36,18 +36,30 @@ class CodexToolWindowFactory : ToolWindowFactory {
     val efforts = arrayOf("low", "medium", "high")
     val modelCombo = JComboBox(models)
     val effortCombo = JComboBox(efforts)
+    val approvalModes = ApprovalMode.values()
+    val approvalCombo = JComboBox(approvalModes)
     cfg.lastModel?.let { m -> models.indexOf(m).takeIf { it >= 0 }?.let(modelCombo::setSelectedIndex) }
     cfg.lastEffort?.let { r -> efforts.indexOf(r).takeIf { it >= 0 }?.let(effortCombo::setSelectedIndex) }
+    cfg.lastApprovalMode?.let { name ->
+      approvalModes.indexOfFirst { it.name == name }.takeIf { it >= 0 }
+        ?.let(approvalCombo::setSelectedIndex)
+    }
     val header = JPanel().apply {
       add(JLabel("Model:"))
       add(modelCombo)
       add(JLabel("Effort:"))
       add(effortCombo)
+      add(JLabel("Approvals:"))
+      add(approvalCombo)
     }
     modelCombo.accessibleContext.accessibleName = "Model selector"
     effortCombo.accessibleContext.accessibleName = "Effort selector"
     modelCombo.addActionListener { cfg.lastModel = modelCombo.selectedItem as String }
     effortCombo.addActionListener { cfg.lastEffort = effortCombo.selectedItem as String }
+    approvalCombo.addActionListener {
+      cfg.lastApprovalMode = (approvalCombo.selectedItem as ApprovalMode).name
+    }
+    approvalCombo.accessibleContext.accessibleName = "Approval mode selector"
     val sender = ProtoSender(
       backend = ServiceBackend(proc),
       config = config,
@@ -67,6 +79,27 @@ class CodexToolWindowFactory : ToolWindowFactory {
 
     val content = ContentFactory.getInstance().createContent(panel, "Chat", false)
     toolWindow.contentManager.addContent(content)
+
+    val store = ApprovalStore()
+    val approvals = ApprovalsController(
+      modeProvider = { approvalCombo.selectedItem as ApprovalMode },
+      store = store,
+      onDecision = { sender.send(it.toString()) },
+      log = log,
+      prompt = { title, message ->
+        javax.swing.JOptionPane.showConfirmDialog(
+          panel,
+          message,
+          title,
+          javax.swing.JOptionPane.YES_NO_OPTION
+        ) == javax.swing.JOptionPane.YES_OPTION
+      }
+    )
+    approvals.wire(bus)
+
+    val resetBtn = javax.swing.JButton("Reset approvals")
+    resetBtn.addActionListener { store.reset() }
+    header.add(resetBtn)
   }
 
   private fun attachReader(service: CodexProcessService, bus: EventBus, log: LogSink) {

@@ -111,11 +111,12 @@ class ChatPanel(
         val body = JsonObject().apply {
             addProperty("type", "UserMessage")
             addProperty("text", text)
-            add("override", JsonObject().apply {
-                addProperty("model", model)
-                addProperty("effort", effort)
-                cwdProvider()?.let { addProperty("cwd", it.toString()) }
-            })
+            val ctx = OverrideTurnContext(
+                cwd = cwdProvider()?.toString(),
+                model = model,
+                effort = effort
+            )
+            add("override", ctx.toJson())
         }
         return EnvelopeJson.encodeSubmission(SubmissionEnvelope(id, "Submit", body))
     }

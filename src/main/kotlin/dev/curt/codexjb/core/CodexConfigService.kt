@@ -9,6 +9,7 @@ class CodexConfigService {
     var defaultArgs: List<String> = listOf("proto")
     var lastModel: String? = null
     var lastEffort: String? = null
+    var lastApprovalMode: String? = null
 
     @Volatile
     private var discoverer: (Path?) -> Path? = { wd ->
