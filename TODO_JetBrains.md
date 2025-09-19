@@ -20,7 +20,7 @@ Execution Order
 - [x] [T1.1] Verify JDK 17; set JAVA_HOME; ensure Gradle wrapper works. (JAVA_HOME script added)
 - [x] [T1.2] Run `./gradlew buildPlugin`; fix any version errors. (Wrapper+WSL tweaks)
 - [x] [T1.3] Add `gson` dep; verify shaded plugin builds. (Zip bundles gson)
-- [ ] [T1.4] Implement `CodexProcessService` start/stop/send methods tests.
+- [x] [T1.4] Implement `CodexProcessService` start/stop/send methods tests. (unit coverage added)
 - [ ] [T1.5] Create `whoami` check task that runs `codex login` if needed.
 - [ ] [T1.6] Add PATH discovery for `codex` on macOS/Linux and Windows.
 - [ ] [T1.7] Add WSL detection; record a flag for later use.

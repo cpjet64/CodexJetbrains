@@ -1,0 +1,21 @@
+<idea-plugin>
+  <id>dev.curt.codexjb</id>
+  <name>Codex for JetBrains (Unofficial)</name>
+  <vendor email="you@example.com">Your Name</vendor>
+  <description>JetBrains integration for OpenAI Codex CLI.</description>
+  <depends>com.intellij.modules.platform</depends>
+  <extensions defaultExtensionNs="com.intellij">
+    <toolWindow id="Codex" anchor="right"
+      factoryClass="dev.curt.codexjb.ui.CodexToolWindowFactory"/>
+    <applicationService
+      serviceImplementation="dev.curt.codexjb.core.CodexProcessService"/>
+  </extensions>
+  <actions>
+    <action id="dev.curt.codexjb.actions.AskCodex"
+      class="dev.curt.codexjb.actions.AskCodexAction"
+      text="Ask Codex" description="Send selection to Codex">
+      <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+      <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt C"/>
+    </action>
+  </actions>
+</idea-plugin>

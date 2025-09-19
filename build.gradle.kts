@@ -14,7 +14,10 @@ intellij {
 }
 
 dependencies {
+  compileOnly(kotlin("stdlib"))
   implementation("com.google.code.gson:gson:2.10.1")
+  testImplementation(kotlin("test"))
+  testImplementation(kotlin("test-junit5"))
 }
 
 tasks {
@@ -28,5 +31,9 @@ tasks {
   patchPluginXml {
     sinceBuild.set("233")
     untilBuild.set("242.*")
+  }
+
+  test {
+    useJUnitPlatform()
   }
 }
