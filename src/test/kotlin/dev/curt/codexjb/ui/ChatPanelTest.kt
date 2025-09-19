@@ -35,6 +35,7 @@ class ChatPanelTest {
         assertTrue(panel.transcriptCount() > before)
         assertTrue(sent.first().contains("\"UserMessage\""))
         assertEquals(1, turns.size())
+        assertEquals(false, panel.isSendEnabled())
     }
 
     @Test

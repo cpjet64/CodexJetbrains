@@ -171,6 +171,7 @@ class ChatPanel(
     }
 
     internal fun transcriptCount(): Int = transcript.componentCount
+    internal fun isSendEnabled(): Boolean = send.isEnabled
 
     internal fun collectTranscriptText(): String {
         val sb = StringBuilder()
