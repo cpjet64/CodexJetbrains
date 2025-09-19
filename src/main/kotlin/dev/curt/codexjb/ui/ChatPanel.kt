@@ -36,6 +36,7 @@ class ChatPanel(
         transcript.layout = BoxLayout(transcript, BoxLayout.Y_AXIS)
         transcript.border = EmptyBorder(8, 8, 8, 8)
         scroll.verticalScrollBar.unitIncrement = 16
+        installContextMenu()
         add(scroll, BorderLayout.CENTER)
         add(buildFooter(), BorderLayout.SOUTH)
         registerListeners()
@@ -170,4 +171,32 @@ class ChatPanel(
     }
 
     internal fun transcriptCount(): Int = transcript.componentCount
+
+    internal fun collectTranscriptText(): String {
+        val sb = StringBuilder()
+        for (c in transcript.components) {
+            when (c) {
+                is JLabel -> sb.appendLine(c.text)
+                is JTextArea -> sb.appendLine(c.text)
+            }
+        }
+        return sb.toString().trimEnd()
+    }
+
+    private fun installContextMenu() {
+        val menu = JPopupMenu()
+        val copy = JMenuItem("Copy")
+        copy.addActionListener {
+            val sel = transcript.getComponentAt(transcript.mousePosition ?: return@addActionListener)
+            val text = when (sel) {
+                is JLabel -> sel.text
+                is JTextArea -> sel.text
+                else -> collectTranscriptText()
+            }
+            val clip = java.awt.Toolkit.getDefaultToolkit().systemClipboard
+            clip.setContents(java.awt.datatransfer.StringSelection(text), null)
+        }
+        menu.add(copy)
+        transcript.componentPopupMenu = menu
+    }
 }
