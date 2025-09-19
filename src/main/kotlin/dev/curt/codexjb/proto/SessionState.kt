@@ -1,0 +1,21 @@
+package dev.curt.codexjb.proto
+
+import com.google.gson.JsonObject
+
+class SessionState {
+    @Volatile var model: String? = null
+        private set
+    @Volatile var effort: String? = null
+        private set
+    @Volatile var rolloutPath: String? = null
+        private set
+
+    fun onEvent(id: String, msg: JsonObject) {
+        val type = msg.get("type")?.asString ?: return
+        if (type != "SessionConfigured") return
+        model = msg.get("model")?.asString ?: model
+        effort = msg.get("effort")?.asString ?: effort
+        rolloutPath = msg.get("rollout_path")?.asString ?: rolloutPath
+    }
+}
+

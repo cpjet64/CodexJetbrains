@@ -41,7 +41,7 @@ Execution Order
 - [x] [T2.6] Render StreamError and Error banners in panel.
 - [x] [T2.7] Implement heartbeat ping (optional no-op submission).
 - [x] [T2.8] Add retry on broken pipe; show reconnect UI.
-- [ ] [T2.9] Record SessionConfigured; show session header.
+- [x] [T2.9] Record SessionConfigured; show session header.
 - [ ] [T2.10] Collect TokenCount; update usage indicators.
 - [ ] [T2.11] Persist last session rollout_path in logs.
 - [ ] [T2.12] Unit test correlation logic with fake stream.
