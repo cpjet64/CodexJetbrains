@@ -72,7 +72,7 @@ Execution Order
 - [x] [T4.9] Log denied approvals with reason code.
 - [x] [T4.10] Unit test approval request→response mapping.
 - [x] [T4.11] Persist last approval mode to settings.
-- [ ] [T4.12] Add warning banner for Full Access mode.
+- [x] [T4.12] Add warning banner for Full Access mode.
 
 ## T5. Diff preview and apply
 - [ ] [T5.1] Parse TurnDiff unified diff to file hunks.

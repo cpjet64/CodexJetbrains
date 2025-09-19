@@ -52,12 +52,17 @@ class CodexToolWindowFactory : ToolWindowFactory {
       add(JLabel("Approvals:"))
       add(approvalCombo)
     }
+    val warn = JLabel("Full Access mode")
+    warn.foreground = java.awt.Color(0xB0, 0, 0)
+    warn.isVisible = (approvalCombo.selectedItem as ApprovalMode) == ApprovalMode.FULL_ACCESS
+    header.add(warn)
     modelCombo.accessibleContext.accessibleName = "Model selector"
     effortCombo.accessibleContext.accessibleName = "Effort selector"
     modelCombo.addActionListener { cfg.lastModel = modelCombo.selectedItem as String }
     effortCombo.addActionListener { cfg.lastEffort = effortCombo.selectedItem as String }
     approvalCombo.addActionListener {
       cfg.lastApprovalMode = (approvalCombo.selectedItem as ApprovalMode).name
+      warn.isVisible = (approvalCombo.selectedItem as ApprovalMode) == ApprovalMode.FULL_ACCESS
     }
     approvalCombo.accessibleContext.accessibleName = "Approval mode selector"
     val sender = ProtoSender(
