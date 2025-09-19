@@ -12,6 +12,8 @@ Rules
 - Create a Git commit for each subtask after its post-test passes.
 - Commit message format: "[T<task>.<sub>] <short>; post-test=<pass>; compare=<summary>".
 - Example: "[T1.3] Create UI crate; post-test=pass; compare=N/A".
+- For each subtask: mark [/] on start, [x] after post-test pass, [!] if blocked; update before next.
+
 
 Execution Order
 - Complete tasks from top to bottom. Do not skip ahead.
@@ -22,7 +24,7 @@ Execution Order
 - [x] [T1.3] Add `gson` dep; verify shaded plugin builds. (Zip bundles gson)
 - [x] [T1.4] Implement `CodexProcessService` start/stop/send methods tests. (unit coverage added)
 - [x] [T1.5] Create `whoami` check task that runs `codex login` if needed. (auto login helper)
-- [ ] [T1.6] Add PATH discovery for `codex` on macOS/Linux and Windows.
+- [x] [T1.6] Add PATH discovery for `codex` on macOS/Linux and Windows.
 - [ ] [T1.7] Add WSL detection; record a flag for later use.
 - [ ] [T1.8] Implement graceful shutdown hook on project close.
 - [ ] [T1.9] Add logger facade; route to `idea.log` with categories.
