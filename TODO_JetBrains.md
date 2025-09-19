@@ -47,7 +47,7 @@ Execution Order
 - [x] [T2.12] Unit test correlation logic with fake stream.
 
 ## T3. ToolWindow UI and chat basics
-- [ ] [T3.1] Create ToolWindow with input box and send button.
+- [x] [T3.1] Create ToolWindow with input box and send button.
 - [ ] [T3.2] Render user bubble on submit.
 - [ ] [T3.3] Append AgentMessageDelta tokens live.
 - [ ] [T3.4] Seal message on AgentMessage final event.

@@ -2,6 +2,7 @@ package dev.curt.codexjb.core
 
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
+import java.io.InputStream
 
 class CodexProcessService(
     private val factory: CodexProcessFactory = DefaultCodexProcessFactory()
@@ -53,6 +54,11 @@ class CodexProcessService(
     fun isRunning(): Boolean = lock.withLock { state?.handle?.isAlive() == true }
 
     fun currentConfig(): CodexProcessConfig? = lock.withLock { state?.handle?.config }
+
+    fun streams(): Pair<InputStream, InputStream>? = lock.withLock {
+        val h = state?.handle ?: return null
+        Pair(h.stdout.asInputStream(), h.stderr.asInputStream())
+    }
 
     private data class ProcessState(val handle: CodexProcessHandle)
 }
