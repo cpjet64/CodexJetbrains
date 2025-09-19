@@ -33,7 +33,7 @@ Execution Order
 - [x] [T1.12] Add status bar widget: session model and effort.
 
 ## T2. Protocol client and correlation
-- [ ] [T2.1] Model Submission and Event envelopes (id, op; id, msg).
+- [x] [T2.1] Model Submission and Event envelopes (id, op; id, msg).
 - [ ] [T2.2] Implement UUID id creation helper.
 - [ ] [T2.3] Add listener registry for JSON events.
 - [ ] [T2.4] Implement tolerant JSON parsing with try/catch.
