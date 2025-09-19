@@ -29,7 +29,7 @@ Execution Order
 - [x] [T1.8] Implement graceful shutdown hook on project close.
 - [x] [T1.9] Add logger facade; route to `idea.log` with categories.
 - [x] [T1.10] Add configuration service storing CLI path and flags.
-- [ ] [T1.11] Create diagnostics action to dump env and CLI version.
+- [x] [T1.11] Create diagnostics action to dump env and CLI version.
 - [ ] [T1.12] Add status bar widget: session model and effort.
 
 ## T2. Protocol client and correlation
