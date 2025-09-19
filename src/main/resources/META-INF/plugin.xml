@@ -9,6 +9,8 @@
       factoryClass="dev.curt.codexjb.ui.CodexToolWindowFactory"/>
     <applicationService
       serviceImplementation="dev.curt.codexjb.core.CodexProcessService"/>
+    <projectManagerListener
+      implementation="dev.curt.codexjb.core.CodexProjectCloseListener"/>
   </extensions>
   <actions>
     <action id="dev.curt.codexjb.actions.AskCodex"

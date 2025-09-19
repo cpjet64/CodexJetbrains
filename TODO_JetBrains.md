@@ -26,7 +26,7 @@ Execution Order
 - [x] [T1.5] Create `whoami` check task that runs `codex login` if needed. (auto login helper)
 - [x] [T1.6] Add PATH discovery for `codex` on macOS/Linux and Windows.
 - [x] [T1.7] Add WSL detection; record a flag for later use.
-- [ ] [T1.8] Implement graceful shutdown hook on project close.
+- [x] [T1.8] Implement graceful shutdown hook on project close.
 - [ ] [T1.9] Add logger facade; route to `idea.log` with categories.
 - [ ] [T1.10] Add configuration service storing CLI path and flags.
 - [ ] [T1.11] Create diagnostics action to dump env and CLI version.
