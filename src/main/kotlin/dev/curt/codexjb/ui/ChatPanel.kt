@@ -29,6 +29,7 @@ class ChatPanel(
     private val input = JTextArea(3, 40)
     private val send = JButton("Send")
     private val clear = JButton("Clear")
+    private val spinner = JProgressBar().apply { isIndeterminate = true; isVisible = false }
     private var activeTurnId: String? = null
     private var currentAgentArea: JTextArea? = null
 
@@ -61,6 +62,7 @@ class ChatPanel(
         }
         clear.toolTipText = "Clear chat"
         controls.add(send)
+        controls.add(spinner)
         controls.add(clear)
         panel.add(JScrollPane(input), BorderLayout.CENTER)
         panel.add(controls, BorderLayout.EAST)
@@ -155,6 +157,7 @@ class ChatPanel(
 
     private fun setSending(active: Boolean) {
         send.isEnabled = !active
+        spinner.isVisible = active
     }
 
     private fun scrollToBottom() {
@@ -172,6 +175,7 @@ class ChatPanel(
 
     internal fun transcriptCount(): Int = transcript.componentCount
     internal fun isSendEnabled(): Boolean = send.isEnabled
+    internal fun isSpinnerVisible(): Boolean = spinner.isVisible
 
     internal fun collectTranscriptText(): String {
         val sb = StringBuilder()

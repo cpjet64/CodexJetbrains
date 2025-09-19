@@ -56,7 +56,7 @@ Execution Order
 - [x] [T3.7] Add model and reasoning selectors in header.
 - [x] [T3.8] Persist last model/effort to settings.
 - [x] [T3.9] Disable Send while a turn is active.
-- [ ] [T3.10] Show spinner while streaming.
+- [x] [T3.10] Show spinner while streaming.
 - [ ] [T3.11] Add accessibility labels for controls.
 - [ ] [T3.12] Write UI tests for basic flows.
 

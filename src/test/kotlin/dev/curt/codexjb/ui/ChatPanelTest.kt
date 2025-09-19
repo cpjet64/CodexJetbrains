@@ -36,6 +36,7 @@ class ChatPanelTest {
         assertTrue(sent.first().contains("\"UserMessage\""))
         assertEquals(1, turns.size())
         assertEquals(false, panel.isSendEnabled())
+        assertEquals(true, panel.isSpinnerVisible())
     }
 
     @Test
