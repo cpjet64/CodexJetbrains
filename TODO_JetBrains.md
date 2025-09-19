@@ -103,7 +103,7 @@ Execution Order
 - [ ] [T6.12] Show approval decision status in console header.
 
 ## T7. MCP tools and prompts
-- [ ] [T7.1] Send ListMcpTools and render tool list with descriptions.
+- [x] [T7.1] Send ListMcpTools and render tool list with descriptions.
 - [ ] [T7.2] Add run tool action if CLI emits tool call ops.
 - [ ] [T7.3] Show tool call begin/end with timing in transcript.
 - [ ] [T7.4] ListCustomPrompts and render prompt library panel.
@@ -111,7 +111,7 @@ Execution Order
 - [ ] [T7.6] Persist last used tool and prompt.
 - [ ] [T7.7] Handle missing MCP servers gracefully.
 - [ ] [T7.8] Add refresh tools button; debounce calls.
-- [ ] [T7.9] Unit tests: synthetic MCP list response.
+- [x] [T7.9] Unit tests: synthetic MCP list response.
 - [ ] [T7.10] Telemetry: count tool invocations per session.
 - [ ] [T7.11] Expose MCP server config link in settings.
 - [ ] [T7.12] Add hover help for tool fields.
