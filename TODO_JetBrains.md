@@ -36,7 +36,7 @@ Execution Order
 - [x] [T2.1] Model Submission and Event envelopes (id, op; id, msg).
 - [x] [T2.2] Implement UUID id creation helper.
 - [x] [T2.3] Add listener registry for JSON events.
-- [ ] [T2.4] Implement tolerant JSON parsing with try/catch.
+- [x] [T2.4] Implement tolerant JSON parsing with try/catch.
 - [ ] [T2.5] Add in-flight map id→turn; expire on TaskComplete.
 - [ ] [T2.6] Render StreamError and Error banners in panel.
 - [ ] [T2.7] Implement heartbeat ping (optional no-op submission).
