@@ -21,7 +21,7 @@ Execution Order
 - [x] [T1.2] Run `./gradlew buildPlugin`; fix any version errors. (Wrapper+WSL tweaks)
 - [x] [T1.3] Add `gson` dep; verify shaded plugin builds. (Zip bundles gson)
 - [x] [T1.4] Implement `CodexProcessService` start/stop/send methods tests. (unit coverage added)
-- [ ] [T1.5] Create `whoami` check task that runs `codex login` if needed.
+- [x] [T1.5] Create `whoami` check task that runs `codex login` if needed. (auto login helper)
 - [ ] [T1.6] Add PATH discovery for `codex` on macOS/Linux and Windows.
 - [ ] [T1.7] Add WSL detection; record a flag for later use.
 - [ ] [T1.8] Implement graceful shutdown hook on project close.
