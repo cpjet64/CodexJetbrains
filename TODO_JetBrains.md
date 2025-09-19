@@ -53,8 +53,8 @@ Execution Order
 - [x] [T3.4] Seal message on AgentMessage final event.
 - [x] [T3.5] Add clear chat action; confirm before clearing.
 - [x] [T3.6] Add copy message to clipboard action.
-- [ ] [T3.7] Add model and reasoning selectors in header.
-- [ ] [T3.8] Persist last model/effort to settings.
+- [x] [T3.7] Add model and reasoning selectors in header.
+- [x] [T3.8] Persist last model/effort to settings.
 - [ ] [T3.9] Disable Send while a turn is active.
 - [ ] [T3.10] Show spinner while streaming.
 - [ ] [T3.11] Add accessibility labels for controls.

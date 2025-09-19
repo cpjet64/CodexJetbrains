@@ -7,6 +7,8 @@ import java.nio.file.Path
 class CodexConfigService {
     var cliPath: Path? = null
     var defaultArgs: List<String> = listOf("proto")
+    var lastModel: String? = null
+    var lastEffort: String? = null
 
     @Volatile
     private var discoverer: (Path?) -> Path? = { wd ->
@@ -25,4 +27,3 @@ class CodexConfigService {
         return cliPath ?: discoverer(workingDirectory)
     }
 }
-
