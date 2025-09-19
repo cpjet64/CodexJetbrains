@@ -1,8 +1,9 @@
 package dev.curt.codexjb.proto
 
 import com.google.gson.JsonObject
+import dev.curt.codexjb.core.LogSink
 
-class SessionState {
+class SessionState(private val log: LogSink? = null) {
     @Volatile var model: String? = null
         private set
     @Volatile var effort: String? = null
@@ -15,7 +16,10 @@ class SessionState {
         if (type != "SessionConfigured") return
         model = msg.get("model")?.asString ?: model
         effort = msg.get("effort")?.asString ?: effort
-        rolloutPath = msg.get("rollout_path")?.asString ?: rolloutPath
+        val newRollout = msg.get("rollout_path")?.asString
+        if (!newRollout.isNullOrBlank() && newRollout != rolloutPath) {
+            rolloutPath = newRollout
+            log?.info("Session rollout_path: $newRollout")
+        }
     }
 }
-
