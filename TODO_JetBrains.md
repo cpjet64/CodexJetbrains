@@ -25,7 +25,7 @@ Execution Order
 - [x] [T1.4] Implement `CodexProcessService` start/stop/send methods tests. (unit coverage added)
 - [x] [T1.5] Create `whoami` check task that runs `codex login` if needed. (auto login helper)
 - [x] [T1.6] Add PATH discovery for `codex` on macOS/Linux and Windows.
-- [ ] [T1.7] Add WSL detection; record a flag for later use.
+- [x] [T1.7] Add WSL detection; record a flag for later use.
 - [ ] [T1.8] Implement graceful shutdown hook on project close.
 - [ ] [T1.9] Add logger facade; route to `idea.log` with categories.
 - [ ] [T1.10] Add configuration service storing CLI path and flags.
