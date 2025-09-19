@@ -58,7 +58,7 @@ Execution Order
 - [x] [T3.9] Disable Send while a turn is active.
 - [x] [T3.10] Show spinner while streaming.
 - [x] [T3.11] Add accessibility labels for controls.
-- [ ] [T3.12] Write UI tests for basic flows.
+- [x] [T3.12] Write UI tests for basic flows.
 
 ## T4. Context and approvals
 - [ ] [T4.1] Implement OverrideTurnContext with cwd/model/effort.
