@@ -37,7 +37,7 @@ Execution Order
 - [x] [T2.2] Implement UUID id creation helper.
 - [x] [T2.3] Add listener registry for JSON events.
 - [x] [T2.4] Implement tolerant JSON parsing with try/catch.
-- [ ] [T2.5] Add in-flight map id→turn; expire on TaskComplete.
+- [x] [T2.5] Add in-flight map id→turn; expire on TaskComplete.
 - [ ] [T2.6] Render StreamError and Error banners in panel.
 - [ ] [T2.7] Implement heartbeat ping (optional no-op submission).
 - [ ] [T2.8] Add retry on broken pipe; show reconnect UI.
