@@ -11,6 +11,8 @@
       serviceImplementation="dev.curt.codexjb.core.CodexProcessService"/>
     <projectManagerListener
       implementation="dev.curt.codexjb.core.CodexProjectCloseListener"/>
+    <statusBarWidgetFactory
+      implementation="dev.curt.codexjb.ui.CodexStatusBarFactory"/>
   </extensions>
   <actions>
     <action id="dev.curt.codexjb.actions.AskCodex"
