@@ -146,7 +146,7 @@ Execution Order
 
 ## T10. Packaging and parity checks
 - [ ] [T10.1] Add plugin icon and description polish.
-- [ ] [T10.2] Run buildPlugin and verify produced ZIP installs.
+- [x] [T10.2] Run buildPlugin and verify produced ZIP installs.
 - [ ] [T10.3] Smoke test on IntelliJ IDEA and Rider.
 - [ ] [T10.4] Create parity checklist from VSIX manifest items.
 - [ ] [T10.5] Verify editor context action behavior parity.
