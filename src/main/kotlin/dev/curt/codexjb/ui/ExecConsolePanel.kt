@@ -1,5 +1,6 @@
 package dev.curt.codexjb.ui
 
+import dev.curt.codexjb.core.TelemetryService
 import dev.curt.codexjb.proto.EventBus
 import java.awt.BorderLayout
 import javax.swing.JButton
@@ -49,6 +50,13 @@ class ExecConsolePanel : JPanel(BorderLayout()) {
 
     fun onEnd(code: Int, durationMs: Long) {
         area.append("\n[exit=$code in ${durationMs}ms]\n")
+        
+        // Record telemetry
+        if (code == 0) {
+            TelemetryService.recordExecCommandSuccess()
+        } else {
+            TelemetryService.recordExecCommandFailure()
+        }
     }
 }
 

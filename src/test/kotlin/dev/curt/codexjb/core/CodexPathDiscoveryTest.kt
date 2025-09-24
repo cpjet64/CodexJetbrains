@@ -26,7 +26,10 @@ class CodexPathDiscoveryTest {
             workingDirectory = null
         )
 
-        assertEquals(codex, found)
+        // Normalize paths to handle Windows path differences
+        val expectedPath = codex.toRealPath()
+        val actualPath = found?.toRealPath()
+        assertEquals(expectedPath, actualPath)
     }
 
     @Test

@@ -70,7 +70,16 @@ object CodexPathDiscovery {
         if (!p.exists() || !p.isRegularFile()) return false
         return when (os) {
             OperatingSystem.WINDOWS -> hasWindowsExecutableExt(p)
-            else -> Files.isExecutable(p)
+            else -> {
+                // For Unix-like systems, check if file is executable
+                // On Windows, Files.isExecutable might not work as expected
+                try {
+                    Files.isExecutable(p)
+                } catch (e: Exception) {
+                    // Fallback to checking if file can be executed
+                    p.toFile().canExecute()
+                }
+            }
         }
     }
 

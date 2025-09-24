@@ -4,6 +4,7 @@
   <vendor email="you@example.com">Your Name</vendor>
   <description>JetBrains integration for OpenAI Codex CLI.</description>
   <depends>com.intellij.modules.platform</depends>
+  <depends optional="true">Git4Idea</depends>
   <extensions defaultExtensionNs="com.intellij">
     <toolWindow id="Codex" anchor="right"
       factoryClass="dev.curt.codexjb.ui.CodexToolWindowFactory"/>

@@ -65,13 +65,21 @@ class CodexToolWindowFactory : ToolWindowFactory {
       warn.isVisible = (approvalCombo.selectedItem as ApprovalMode) == ApprovalMode.FULL_ACCESS
     }
     approvalCombo.accessibleContext.accessibleName = "Approval mode selector"
+    val infoBanner = InfoBanner()
     val sender = ProtoSender(
       backend = ServiceBackend(proc),
       config = config,
-      log = log
+      log = log,
+      onReconnect = { infoBanner.show("Reconnected to Codex CLI") }
     )
     val panel = JPanel(BorderLayout())
-    panel.add(header, BorderLayout.NORTH)
+    val errorBanner = ErrorBanner().apply { wire(bus) }
+    val top = JPanel()
+    top.layout = javax.swing.BoxLayout(top, javax.swing.BoxLayout.Y_AXIS)
+    top.add(errorBanner)
+    top.add(infoBanner)
+    top.add(header)
+    panel.add(top, BorderLayout.NORTH)
     val chat = ChatPanel(
       sender = sender,
       bus = bus,
@@ -98,6 +106,17 @@ class CodexToolWindowFactory : ToolWindowFactory {
           title,
           javax.swing.JOptionPane.YES_NO_OPTION
         ) == javax.swing.JOptionPane.YES_OPTION
+      },
+      promptRationale = { title, message ->
+        javax.swing.JOptionPane.showInputDialog(
+          panel,
+          message,
+          title,
+          javax.swing.JOptionPane.PLAIN_MESSAGE,
+          null,
+          null,
+          ""
+        )?.toString()
       }
     )
     approvals.wire(bus)
@@ -105,6 +124,29 @@ class CodexToolWindowFactory : ToolWindowFactory {
     val resetBtn = javax.swing.JButton("Reset approvals")
     resetBtn.addActionListener { store.reset() }
     header.add(resetBtn)
+
+    // Session header and token usage indicators
+    val sessionLabel = JLabel("")
+    sessionLabel.foreground = java.awt.Color(0x33, 0x33, 0x33)
+    header.add(sessionLabel)
+    val usageLabel = JLabel("")
+    usageLabel.foreground = java.awt.Color(0x55, 0x55, 0x55)
+    header.add(usageLabel)
+
+    bus.addListener("SessionConfigured") { _, msg ->
+      val m = msg.get("model")?.asString
+      val e = msg.get("effort")?.asString
+      val r = msg.get("rollout_path")?.asString
+      val parts = listOfNotNull(m, e, r?.let { "rollout:" + it.substringAfterLast('/') })
+      sessionLabel.text = if (parts.isNotEmpty()) "Session: ${parts.joinToString(" • ")}" else ""
+    }
+
+    bus.addListener("TokenCount") { _, msg ->
+      val input = msg.get("input")?.asInt ?: 0
+      val output = msg.get("output")?.asInt ?: 0
+      val total = msg.get("total")?.asInt ?: (input + output)
+      usageLabel.text = "Tokens: in=$input out=$output total=$total"
+    }
   }
 
   private fun attachReader(service: CodexProcessService, bus: EventBus, log: LogSink) {

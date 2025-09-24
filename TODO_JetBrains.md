@@ -78,14 +78,14 @@ Execution Order
 - [x] [T5.1] Parse TurnDiff unified diff to file hunks.
 - [x] [T5.2] Render two-pane diff viewer for each file.
 - [x] [T5.3] Show file tree with checkboxes to include/exclude files.
-- [ ] [T5.4] Apply patch using WriteCommandAction edits.
-- [ ] [T5.5] On PatchApplyBegin show progress bar.
-- [ ] [T5.6] On PatchApplyEnd show success or failure summary.
-- [ ] [T5.7] Add Discard Patch action to close the turn.
-- [ ] [T5.8] Auto-open changed files option (setting).
-- [ ] [T5.9] Add Git integration: stage applied changes (optional).
-- [ ] [T5.10] Handle conflicts gracefully with a warning.
-- [ ] [T5.11] Unit tests with sample diffs and virtual files.
+- [x] [T5.4] Apply patch using WriteCommandAction edits.
+- [x] [T5.5] On PatchApplyBegin show progress bar.
+- [x] [T5.6] On PatchApplyEnd show success or failure summary.
+- [x] [T5.7] Add Discard Patch action to close the turn.
+- [x] [T5.8] Auto-open changed files option (setting).
+- [x] [T5.9] Add Git integration: stage applied changes (optional).
+- [x] [T5.10] Handle conflicts gracefully with a warning.
+- [/] [T5.11] Unit tests with sample diffs and virtual files. (partial: engine only)
 - [ ] [T5.12] Telemetry counters for apply success/failure.
 
 ## T6. Exec command streaming
@@ -103,7 +103,7 @@ Execution Order
 - [ ] [T6.12] Show approval decision status in console header.
 
 ## T7. MCP tools and prompts
-- [x] [T7.1] Send ListMcpTools and render tool list with descriptions.
+- [/] [T7.1] Send ListMcpTools and render tool list with descriptions. (partial: model only)
 - [ ] [T7.2] Add run tool action if CLI emits tool call ops.
 - [ ] [T7.3] Show tool call begin/end with timing in transcript.
 - [ ] [T7.4] ListCustomPrompts and render prompt library panel.
@@ -146,7 +146,7 @@ Execution Order
 
 ## T10. Packaging and parity checks
 - [ ] [T10.1] Add plugin icon and description polish.
-- [x] [T10.2] Run buildPlugin and verify produced ZIP installs.
+ - [!] [T10.2] Run buildPlugin and verify produced ZIP installs. (blocked: install check; ZIP exists)
 - [ ] [T10.3] Smoke test on IntelliJ IDEA and Rider.
 - [ ] [T10.4] Create parity checklist from VSIX manifest items.
 - [ ] [T10.5] Verify editor context action behavior parity.
