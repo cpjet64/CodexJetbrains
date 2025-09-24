@@ -86,20 +86,20 @@ Execution Order
 - [x] [T5.9] Add Git integration: stage applied changes (optional).
 - [x] [T5.10] Handle conflicts gracefully with a warning.
 - [/] [T5.11] Unit tests with sample diffs and virtual files. (partial: engine only)
-- [ ] [T5.12] Telemetry counters for apply success/failure.
+- [x] [T5.12] Telemetry counters for apply success/failure.
 
 ## T6. Exec command streaming
 - [x] [T6.1] Create console pane for ExecCommandBegin events.
 - [x] [T6.2] Append ExecCommandOutputDelta chunks to console.
 - [x] [T6.3] On ExecCommandEnd print exit code and duration.
 - [x] [T6.4] Honor cwd; show it in console header.
-- [ ] [T6.5] Add Kill process action to send cancel (if supported).
-- [ ] [T6.6] Write ANSI color handling for basic codes.
+- [x] [T6.5] Add Kill process action to send cancel (if supported).
+- [x] [T6.6] Write ANSI color handling for basic codes.
 - [x] [T6.7] Allow copy all to clipboard from console.
-- [ ] [T6.8] Option to auto-open console on exec start.
-- [ ] [T6.9] Limit buffer size to avoid memory pressure.
+- [x] [T6.8] Option to auto-open console on exec start.
+- [x] [T6.9] Limit buffer size to avoid memory pressure.
 - [x] [T6.10] Unit test console with canned output events.
-- [ ] [T6.11] Persist console visibility across sessions.
+- [x] [T6.11] Persist console visibility across sessions.
 - [ ] [T6.12] Show approval decision status in console header.
 
 ## T7. MCP tools and prompts
@@ -107,8 +107,8 @@ Execution Order
 - [ ] [T7.2] Add run tool action if CLI emits tool call ops.
 - [ ] [T7.3] Show tool call begin/end with timing in transcript.
 - [x] [T7.4] ListCustomPrompts and render prompt library panel.
-- [ ] [T7.5] Insert prompt into input box on click.
-- [ ] [T7.6] Persist last used tool and prompt.
+- [x] [T7.5] Insert prompt into input box on click.
+- [x] [T7.6] Persist last used tool and prompt.
 - [ ] [T7.7] Handle missing MCP servers gracefully.
 - [ ] [T7.8] Add refresh tools button; debounce calls.
 - [x] [T7.9] Unit tests: synthetic MCP list response.

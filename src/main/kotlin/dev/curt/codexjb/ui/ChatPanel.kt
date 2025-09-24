@@ -5,6 +5,7 @@ import dev.curt.codexjb.core.CodexConfigService
 import dev.curt.codexjb.core.CodexLogger
 import dev.curt.codexjb.core.LogSink
 import dev.curt.codexjb.proto.*
+import com.intellij.openapi.application.ApplicationManager
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
@@ -74,6 +75,17 @@ class ChatPanel(
             }
         }
         
+        // Add selection listener to save last used tool
+        toolsList.addListSelectionListener { e ->
+            if (!e.valueIsAdjusting) {
+                val selectedTool = toolsList.selectedValue
+                if (selectedTool != null) {
+                    val config = ApplicationManager.getApplication().getService(CodexConfigService::class.java)
+                    config.lastUsedTool = selectedTool
+                }
+            }
+        }
+        
         toolsPanel.add(JScrollPane(toolsList), BorderLayout.CENTER)
         
         // Setup prompts panel
@@ -112,6 +124,17 @@ class ChatPanel(
                     toolTipText = prompts.prompts.find { it.name == value }?.description ?: ""
                 }
                 return renderer
+            }
+        }
+        
+        // Add selection listener to save last used prompt
+        promptsList.addListSelectionListener { e ->
+            if (!e.valueIsAdjusting) {
+                val selectedPrompt = promptsList.selectedValue
+                if (selectedPrompt != null) {
+                    val config = ApplicationManager.getApplication().getService(CodexConfigService::class.java)
+                    config.lastUsedPrompt = selectedPrompt
+                }
             }
         }
         
@@ -188,12 +211,26 @@ class ChatPanel(
         toolsList.model = DefaultListModel<String>().apply {
             toolNames.forEach { addElement(it) }
         }
+        
+        // Restore last used tool selection
+        val config = ApplicationManager.getApplication().getService(CodexConfigService::class.java)
+        val lastUsedTool = config.lastUsedTool
+        if (lastUsedTool != null && toolNames.contains(lastUsedTool)) {
+            toolsList.setSelectedValue(lastUsedTool, true)
+        }
     }
     
     private fun updatePromptsList() {
         val promptNames = prompts.prompts.map { it.name }
         promptsList.model = DefaultListModel<String>().apply {
             promptNames.forEach { addElement(it) }
+        }
+        
+        // Restore last used prompt selection
+        val config = ApplicationManager.getApplication().getService(CodexConfigService::class.java)
+        val lastUsedPrompt = config.lastUsedPrompt
+        if (lastUsedPrompt != null && promptNames.contains(lastUsedPrompt)) {
+            promptsList.setSelectedValue(lastUsedPrompt, true)
         }
     }
 
