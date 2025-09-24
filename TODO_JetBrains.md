@@ -110,7 +110,7 @@ Execution Order
 - [x] [T7.5] Insert prompt into input box on click.
 - [x] [T7.6] Persist last used tool and prompt.
 - [ ] [T7.7] Handle missing MCP servers gracefully.
-- [ ] [T7.8] Add refresh tools button; debounce calls.
+- [x] [T7.8] Add refresh tools button; debounce calls.
 - [x] [T7.9] Unit tests: synthetic MCP list response.
 - [x] [T7.10] Telemetry: count tool invocations per session.
 - [ ] [T7.11] Expose MCP server config link in settings.

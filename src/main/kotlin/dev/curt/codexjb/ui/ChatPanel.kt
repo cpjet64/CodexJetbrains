@@ -35,10 +35,14 @@ class ChatPanel(
     private val spinner = JProgressBar().apply { isIndeterminate = true; isVisible = false }
     private val toolsPanel = JPanel()
     private val toolsList = JList<String>()
+    private val refreshToolsButton = JButton("Refresh")
     private val promptsPanel = JPanel()
     private val promptsList = JList<String>()
+    private val refreshPromptsButton = JButton("Refresh")
     private var activeTurnId: String? = null
     private var currentAgentArea: JTextArea? = null
+    private var lastRefreshTime = 0L
+    private val refreshDebounceMs = 1000L // 1 second debounce
 
     init {
         transcript.layout = BoxLayout(transcript, BoxLayout.Y_AXIS)
@@ -54,8 +58,11 @@ class ChatPanel(
         toolsPanel.layout = BorderLayout()
         toolsPanel.border = EmptyBorder(4, 4, 4, 4)
         
+        val toolsHeader = JPanel(BorderLayout())
         val toolsLabel = JLabel("Available Tools:")
-        toolsPanel.add(toolsLabel, BorderLayout.NORTH)
+        toolsHeader.add(toolsLabel, BorderLayout.WEST)
+        toolsHeader.add(refreshToolsButton, BorderLayout.EAST)
+        toolsPanel.add(toolsHeader, BorderLayout.NORTH)
         
         toolsList.selectionMode = ListSelectionModel.SINGLE_SELECTION
         toolsList.cellRenderer = object : DefaultListCellRenderer() {
@@ -88,6 +95,15 @@ class ChatPanel(
         
         toolsPanel.add(JScrollPane(toolsList), BorderLayout.CENTER)
         
+        // Add refresh button action listener with debouncing
+        refreshToolsButton.addActionListener {
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastRefreshTime > refreshDebounceMs) {
+                lastRefreshTime = currentTime
+                refreshTools()
+            }
+        }
+        
         // Setup prompts panel
         setupPromptsPanel()
         
@@ -106,8 +122,11 @@ class ChatPanel(
         promptsPanel.layout = BorderLayout()
         promptsPanel.border = EmptyBorder(4, 4, 4, 4)
         
+        val promptsHeader = JPanel(BorderLayout())
         val promptsLabel = JLabel("Available Prompts:")
-        promptsPanel.add(promptsLabel, BorderLayout.NORTH)
+        promptsHeader.add(promptsLabel, BorderLayout.WEST)
+        promptsHeader.add(refreshPromptsButton, BorderLayout.EAST)
+        promptsPanel.add(promptsHeader, BorderLayout.NORTH)
         
         promptsList.selectionMode = ListSelectionModel.SINGLE_SELECTION
         promptsList.cellRenderer = object : DefaultListCellRenderer() {
@@ -154,6 +173,15 @@ class ChatPanel(
         })
         
         promptsPanel.add(JScrollPane(promptsList), BorderLayout.CENTER)
+        
+        // Add refresh button action listener with debouncing
+        refreshPromptsButton.addActionListener {
+            val currentTime = System.currentTimeMillis()
+            if (currentTime - lastRefreshTime > refreshDebounceMs) {
+                lastRefreshTime = currentTime
+                refreshPrompts()
+            }
+        }
     }
 
     private fun buildFooter(): JComponent {
@@ -232,6 +260,22 @@ class ChatPanel(
         if (lastUsedPrompt != null && promptNames.contains(lastUsedPrompt)) {
             promptsList.setSelectedValue(lastUsedPrompt, true)
         }
+    }
+    
+    private fun refreshTools() {
+        // Send a request to refresh MCP tools
+        val request = JsonObject()
+        request.addProperty("type", "ListMcpTools")
+        sender.send(request.toString())
+        log.info("Refreshing MCP tools...")
+    }
+    
+    private fun refreshPrompts() {
+        // Send a request to refresh prompts
+        val request = JsonObject()
+        request.addProperty("type", "ListCustomPrompts")
+        sender.send(request.toString())
+        log.info("Refreshing prompts...")
     }
 
     private fun onSend(@Suppress("UNUSED_PARAMETER") e: ActionEvent) {
