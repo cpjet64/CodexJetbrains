@@ -61,6 +61,7 @@ class ChatPanel(
         val toolsHeader = JPanel(BorderLayout())
         val toolsLabel = JLabel("Available Tools:")
         toolsHeader.add(toolsLabel, BorderLayout.WEST)
+        refreshToolsButton.toolTipText = "Refresh the list of available MCP tools"
         toolsHeader.add(refreshToolsButton, BorderLayout.EAST)
         toolsPanel.add(toolsHeader, BorderLayout.NORTH)
         
@@ -76,7 +77,12 @@ class ChatPanel(
                 val renderer = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
                 if (value is String) {
                     text = value
-                    toolTipText = mcpTools.tools.find { it.name == value }?.description ?: ""
+                    val tool = mcpTools.tools.find { it.name == value }
+                    toolTipText = if (tool != null) {
+                        "Tool: ${tool.name}\nDescription: ${tool.description}\n\nDouble-click to use this tool"
+                    } else {
+                        "Tool: $value\n\nDouble-click to use this tool"
+                    }
                 }
                 return renderer
             }
@@ -125,6 +131,7 @@ class ChatPanel(
         val promptsHeader = JPanel(BorderLayout())
         val promptsLabel = JLabel("Available Prompts:")
         promptsHeader.add(promptsLabel, BorderLayout.WEST)
+        refreshPromptsButton.toolTipText = "Refresh the list of available prompts"
         promptsHeader.add(refreshPromptsButton, BorderLayout.EAST)
         promptsPanel.add(promptsHeader, BorderLayout.NORTH)
         
@@ -140,7 +147,12 @@ class ChatPanel(
                 val renderer = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
                 if (value is String) {
                     text = value
-                    toolTipText = prompts.prompts.find { it.name == value }?.description ?: ""
+                    val prompt = prompts.prompts.find { it.name == value }
+                    toolTipText = if (prompt != null) {
+                        "Prompt: ${prompt.name}\nDescription: ${prompt.description}\n\nDouble-click to insert this prompt into the input box"
+                    } else {
+                        "Prompt: $value\n\nDouble-click to insert this prompt into the input box"
+                    }
                 }
                 return renderer
             }

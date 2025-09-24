@@ -114,7 +114,7 @@ Execution Order
 - [x] [T7.9] Unit tests: synthetic MCP list response.
 - [x] [T7.10] Telemetry: count tool invocations per session.
 - [ ] [T7.11] Expose MCP server config link in settings.
-- [ ] [T7.12] Add hover help for tool fields.
+- [x] [T7.12] Add hover help for tool fields.
 
 ## T8. Settings and configuration
 - [ ] [T8.1] Add Settings page: CLI path, WSL toggle, open on startup.
