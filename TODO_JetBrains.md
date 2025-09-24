@@ -112,7 +112,7 @@ Execution Order
 - [ ] [T7.7] Handle missing MCP servers gracefully.
 - [ ] [T7.8] Add refresh tools button; debounce calls.
 - [x] [T7.9] Unit tests: synthetic MCP list response.
-- [ ] [T7.10] Telemetry: count tool invocations per session.
+- [x] [T7.10] Telemetry: count tool invocations per session.
 - [ ] [T7.11] Expose MCP server config link in settings.
 - [ ] [T7.12] Add hover help for tool fields.
 

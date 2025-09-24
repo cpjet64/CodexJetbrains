@@ -25,6 +25,10 @@ object TelemetryService {
     private val sessionEnds = AtomicLong(0)
     private val sessionErrors = AtomicLong(0)
     
+    // Session-based tool invocations
+    private val toolInvocationsPerSession = mutableMapOf<String, AtomicLong>()
+    private var currentSessionId: String? = null
+    
     fun recordPatchApplySuccess() {
         patchApplySuccess.incrementAndGet()
         patchApplyTotal.incrementAndGet()
@@ -51,7 +55,12 @@ object TelemetryService {
     
     fun recordMcpToolInvocation() {
         mcpToolInvocations.incrementAndGet()
-        log.info("MCP tool invocation: ${mcpToolInvocations.get()}")
+        
+        // Track per-session invocations
+        val sessionId = currentSessionId ?: "unknown"
+        toolInvocationsPerSession.computeIfAbsent(sessionId) { AtomicLong(0) }.incrementAndGet()
+        
+        log.info("MCP tool invocation: ${mcpToolInvocations.get()} (session: $sessionId)")
     }
     
     fun recordMcpToolFailure() {
@@ -59,9 +68,10 @@ object TelemetryService {
         log.info("MCP tool failure: ${mcpToolFailures.get()}")
     }
     
-    fun recordSessionStart() {
+    fun recordSessionStart(sessionId: String? = null) {
         sessionStarts.incrementAndGet()
-        log.info("Session start: ${sessionStarts.get()}")
+        currentSessionId = sessionId ?: "session_${System.currentTimeMillis()}"
+        log.info("Session start: ${sessionStarts.get()} (id: $currentSessionId)")
     }
     
     fun recordSessionEnd() {
@@ -103,6 +113,18 @@ object TelemetryService {
             ends = sessionEnds.get(),
             errors = sessionErrors.get()
         )
+    }
+    
+    fun getCurrentSessionToolInvocations(): Long {
+        return currentSessionId?.let { toolInvocationsPerSession[it]?.get() ?: 0 } ?: 0
+    }
+    
+    fun getToolInvocationsForSession(sessionId: String): Long {
+        return toolInvocationsPerSession[sessionId]?.get() ?: 0
+    }
+    
+    fun getAllSessionToolInvocations(): Map<String, Long> {
+        return toolInvocationsPerSession.mapValues { it.value.get() }
     }
     
     fun getAllStats(): TelemetryStats {

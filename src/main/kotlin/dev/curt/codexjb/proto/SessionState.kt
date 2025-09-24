@@ -16,8 +16,8 @@ class SessionState(private val log: LogSink? = null) {
         val type = msg.get("type")?.asString ?: return
         if (type != "SessionConfigured") return
         
-        // Record session start
-        TelemetryService.recordSessionStart()
+        // Record session start with session ID
+        TelemetryService.recordSessionStart(id)
         
         model = msg.get("model")?.asString ?: model
         effort = msg.get("effort")?.asString ?: effort
