@@ -20,7 +20,9 @@ class ChatPanel(
     private val turns: TurnRegistry,
     private val modelProvider: () -> String,
     private val effortProvider: () -> String,
-    private val cwdProvider: () -> Path?
+    private val cwdProvider: () -> Path?,
+    private val mcpTools: McpToolsModel = McpToolsModel(),
+    private val prompts: PromptsModel = PromptsModel()
 ) : JPanel(BorderLayout()) {
 
     private val log: LogSink = CodexLogger.forClass(ChatPanel::class.java)
@@ -30,6 +32,10 @@ class ChatPanel(
     private val send = JButton("Send")
     private val clear = JButton("Clear")
     private val spinner = JProgressBar().apply { isIndeterminate = true; isVisible = false }
+    private val toolsPanel = JPanel()
+    private val toolsList = JList<String>()
+    private val promptsPanel = JPanel()
+    private val promptsList = JList<String>()
     private var activeTurnId: String? = null
     private var currentAgentArea: JTextArea? = null
 
@@ -38,9 +44,93 @@ class ChatPanel(
         transcript.border = EmptyBorder(8, 8, 8, 8)
         scroll.verticalScrollBar.unitIncrement = 16
         installContextMenu()
-        add(scroll, BorderLayout.CENTER)
+        setupToolsPanel()
         add(buildFooter(), BorderLayout.SOUTH)
         registerListeners()
+    }
+
+    private fun setupToolsPanel() {
+        toolsPanel.layout = BorderLayout()
+        toolsPanel.border = EmptyBorder(4, 4, 4, 4)
+        
+        val toolsLabel = JLabel("Available Tools:")
+        toolsPanel.add(toolsLabel, BorderLayout.NORTH)
+        
+        toolsList.selectionMode = ListSelectionModel.SINGLE_SELECTION
+        toolsList.cellRenderer = object : DefaultListCellRenderer() {
+            override fun getListCellRendererComponent(
+                list: JList<*>,
+                value: Any?,
+                index: Int,
+                isSelected: Boolean,
+                cellHasFocus: Boolean
+            ): Component {
+                val renderer = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
+                if (value is String) {
+                    text = value
+                    toolTipText = mcpTools.tools.find { it.name == value }?.description ?: ""
+                }
+                return renderer
+            }
+        }
+        
+        toolsPanel.add(JScrollPane(toolsList), BorderLayout.CENTER)
+        
+        // Setup prompts panel
+        setupPromptsPanel()
+        
+        // Create a tabbed pane for tools and prompts
+        val tabbedPane = JTabbedPane()
+        tabbedPane.addTab("Tools", toolsPanel)
+        tabbedPane.addTab("Prompts", promptsPanel)
+        
+        // Add tabbed pane to the right side
+        val splitPane = JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scroll, tabbedPane)
+        splitPane.dividerLocation = 400
+        add(splitPane, BorderLayout.CENTER)
+    }
+
+    private fun setupPromptsPanel() {
+        promptsPanel.layout = BorderLayout()
+        promptsPanel.border = EmptyBorder(4, 4, 4, 4)
+        
+        val promptsLabel = JLabel("Available Prompts:")
+        promptsPanel.add(promptsLabel, BorderLayout.NORTH)
+        
+        promptsList.selectionMode = ListSelectionModel.SINGLE_SELECTION
+        promptsList.cellRenderer = object : DefaultListCellRenderer() {
+            override fun getListCellRendererComponent(
+                list: JList<*>,
+                value: Any?,
+                index: Int,
+                isSelected: Boolean,
+                cellHasFocus: Boolean
+            ): Component {
+                val renderer = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
+                if (value is String) {
+                    text = value
+                    toolTipText = prompts.prompts.find { it.name == value }?.description ?: ""
+                }
+                return renderer
+            }
+        }
+        
+        // Add double-click listener to insert prompt content
+        promptsList.addMouseListener(object : java.awt.event.MouseAdapter() {
+            override fun mouseClicked(e: java.awt.event.MouseEvent) {
+                if (e.clickCount == 2) {
+                    val selectedPrompt = promptsList.selectedValue
+                    if (selectedPrompt != null) {
+                        val prompt = prompts.prompts.find { it.name == selectedPrompt }
+                        if (prompt != null) {
+                            input.text = prompt.content
+                        }
+                    }
+                }
+            }
+        })
+        
+        promptsPanel.add(JScrollPane(promptsList), BorderLayout.CENTER)
     }
 
     private fun buildFooter(): JComponent {
@@ -82,6 +172,28 @@ class ChatPanel(
         bus.addListener("AgentMessage") { id, _ ->
             if (id != activeTurnId) return@addListener
             SwingUtilities.invokeLater { sealAgentMessage() }
+        }
+        bus.addListener("McpToolsList") { id, msg ->
+            mcpTools.onEvent(id, msg)
+            SwingUtilities.invokeLater { updateToolsList() }
+        }
+        bus.addListener("PromptsList") { id, msg ->
+            prompts.onEvent(id, msg)
+            SwingUtilities.invokeLater { updatePromptsList() }
+        }
+    }
+    
+    private fun updateToolsList() {
+        val toolNames = mcpTools.tools.map { it.name }
+        toolsList.model = DefaultListModel<String>().apply {
+            toolNames.forEach { addElement(it) }
+        }
+    }
+    
+    private fun updatePromptsList() {
+        val promptNames = prompts.prompts.map { it.name }
+        promptsList.model = DefaultListModel<String>().apply {
+            promptNames.forEach { addElement(it) }
         }
     }
 

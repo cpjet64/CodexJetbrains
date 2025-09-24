@@ -106,7 +106,7 @@ Execution Order
 - [/] [T7.1] Send ListMcpTools and render tool list with descriptions. (partial: model only)
 - [ ] [T7.2] Add run tool action if CLI emits tool call ops.
 - [ ] [T7.3] Show tool call begin/end with timing in transcript.
-- [ ] [T7.4] ListCustomPrompts and render prompt library panel.
+- [x] [T7.4] ListCustomPrompts and render prompt library panel.
 - [ ] [T7.5] Insert prompt into input box on click.
 - [ ] [T7.6] Persist last used tool and prompt.
 - [ ] [T7.7] Handle missing MCP servers gracefully.
