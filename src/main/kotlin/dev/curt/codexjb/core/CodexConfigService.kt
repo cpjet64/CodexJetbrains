@@ -16,7 +16,9 @@ class CodexConfigService : PersistentStateComponent<CodexConfigService.State> {
         var lastEffort: String? = null,
         var lastApprovalMode: String? = null,
         var autoOpenChangedFiles: Boolean = false,
-        var autoStageAppliedChanges: Boolean = false
+        var autoStageAppliedChanges: Boolean = false,
+        var autoOpenConsoleOnExec: Boolean = false,
+        var consoleVisible: Boolean = false
     )
 
     private var state = State()
@@ -46,6 +48,14 @@ class CodexConfigService : PersistentStateComponent<CodexConfigService.State> {
     var autoStageAppliedChanges: Boolean
         get() = state.autoStageAppliedChanges
         set(value) { state.autoStageAppliedChanges = value }
+
+    var autoOpenConsoleOnExec: Boolean
+        get() = state.autoOpenConsoleOnExec
+        set(value) { state.autoOpenConsoleOnExec = value }
+
+    var consoleVisible: Boolean
+        get() = state.consoleVisible
+        set(value) { state.consoleVisible = value }
 
     @Volatile
     private var discoverer: (Path?) -> Path? = { wd ->

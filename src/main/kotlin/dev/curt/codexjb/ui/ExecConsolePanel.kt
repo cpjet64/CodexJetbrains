@@ -8,21 +8,43 @@ import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JScrollPane
 import javax.swing.JTextArea
+import javax.swing.JTextPane
+import javax.swing.text.StyledDocument
 
 class ExecConsolePanel : JPanel(BorderLayout()) {
     private val header = JLabel("")
-    private val area = JTextArea()
+    private val area = JTextPane()
     private val copy = JButton("Copy All")
+    private val kill = JButton("Kill Process")
+    private var currentProcess: Process? = null
+    private val maxBufferSize = 100_000 // 100KB limit
 
     init {
         area.isEditable = false
         add(header, BorderLayout.NORTH)
         add(JScrollPane(area), BorderLayout.CENTER)
+        
+        val buttonPanel = JPanel()
+        buttonPanel.add(copy)
+        buttonPanel.add(kill)
+        add(buttonPanel, BorderLayout.SOUTH)
+        
         copy.addActionListener {
             val clip = java.awt.Toolkit.getDefaultToolkit().systemClipboard
             clip.setContents(java.awt.datatransfer.StringSelection(area.text), null)
         }
-        add(copy, BorderLayout.SOUTH)
+        
+        kill.addActionListener {
+            currentProcess?.let { process ->
+                if (process.isAlive) {
+                    process.destroyForcibly()
+                    val doc = area.styledDocument
+                    doc.insertString(doc.length, "\n[Process killed]\n", null)
+                }
+            }
+        }
+        
+        kill.isEnabled = false
     }
 
     fun wire(bus: EventBus) {
@@ -44,12 +66,28 @@ class ExecConsolePanel : JPanel(BorderLayout()) {
     fun onBegin(cwd: String, command: String) {
         header.text = "Exec: $command @ $cwd"
         area.text = ""
+        kill.isEnabled = true
     }
 
-    fun onDelta(chunk: String) { area.append(chunk) }
+    fun onDelta(chunk: String) { 
+        val doc = area.styledDocument
+        val startOffset = doc.length
+        
+        // Check buffer size and trim if necessary
+        if (startOffset > maxBufferSize) {
+            val trimSize = maxBufferSize / 2
+            doc.remove(0, trimSize)
+        }
+        
+        AnsiColorHandler.processAnsiCodes(chunk, doc, doc.length)
+    }
 
     fun onEnd(code: Int, durationMs: Long) {
-        area.append("\n[exit=$code in ${durationMs}ms]\n")
+        val doc = area.styledDocument
+        val endText = "\n[exit=$code in ${durationMs}ms]\n"
+        doc.insertString(doc.length, endText, null)
+        kill.isEnabled = false
+        currentProcess = null
         
         // Record telemetry
         if (code == 0) {
@@ -57,6 +95,11 @@ class ExecConsolePanel : JPanel(BorderLayout()) {
         } else {
             TelemetryService.recordExecCommandFailure()
         }
+    }
+    
+    fun setCurrentProcess(process: Process?) {
+        currentProcess = process
+        kill.isEnabled = process?.isAlive == true
     }
 }
 
