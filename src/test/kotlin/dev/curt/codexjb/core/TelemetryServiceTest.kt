@@ -1,9 +1,16 @@
 package dev.curt.codexjb.core
 
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 class TelemetryServiceTest {
+
+    @BeforeTest
+    fun reset() {
+        TelemetryService.resetForTests()
+    }
+
     
     @Test
     fun recordsPatchApplySuccess() {

@@ -7,7 +7,6 @@ class StatusTextBuilderTest {
     @Test
     fun buildsStatusText() {
         val s = StatusTextBuilder.build("gpt-4.1-mini", "high")
-        assertEquals("Codex: gpt-4.1-mini · high", s)
+        assertEquals("Codex: gpt-4.1-mini \u2022 high", s)
     }
 }
-

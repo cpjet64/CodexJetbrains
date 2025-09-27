@@ -47,18 +47,18 @@ Execution Order
 - [x] [T2.12] Unit test correlation logic with fake stream.
 
 ## T3. ToolWindow UI and chat basics
-- [ ] [T3.1] Create ToolWindow with input box and send button. (blocked: ChatPanel compile failure)
-- [ ] [T3.2] Render user bubble on submit. (blocked by T3.1)
-- [ ] [T3.3] Append AgentMessageDelta tokens live. (blocked by T3.1)
-- [ ] [T3.4] Seal message on AgentMessage final event. (blocked by T3.1)
-- [ ] [T3.5] Add clear chat action; confirm before clearing. (blocked by T3.1)
-- [ ] [T3.6] Add copy message to clipboard action. (blocked by T3.1)
-- [ ] [T3.7] Add model and reasoning selectors in header. (controls exist but compile blocked)
-- [ ] [T3.8] Persist last model/effort to settings. (blocked by T3.1)
-- [ ] [T3.9] Disable Send while a turn is active. (blocked by T3.1)
-- [ ] [T3.10] Show spinner while streaming. (blocked by T3.1)
-- [ ] [T3.11] Add accessibility labels for controls. (blocked by T3.1)
-- [ ] [T3.12] Write UI tests for basic flows. (tests exist but blocked by T3.1 compile failure)
+- [x] [T3.1] Create ToolWindow with input box and send button. (ChatPanel live in tool window)
+- [x] [T3.2] Render user bubble on submit. (renderUserBubble labels added)
+- [x] [T3.3] Append AgentMessageDelta tokens live. (EventBus listener updates agent bubble)
+- [x] [T3.4] Seal message on AgentMessage final event. (sealAgentMessage resets state)
+- [x] [T3.5] Add clear chat action; confirm before clearing. (Clear button shows confirm dialog)
+- [x] [T3.6] Add copy message to clipboard action. (Context menu copies bubbles)
+- [x] [T3.7] Add model and reasoning selectors in header. (Combo boxes persisted)
+- [x] [T3.8] Persist last model/effort to settings. (CodexConfigService updated on selection)
+- [x] [T3.9] Disable Send while a turn is active. (setSending toggles button)
+- [x] [T3.10] Show spinner while streaming. (Spinner visibility tied to setSending)
+- [x] [T3.11] Add accessibility labels for controls. (Accessible names on inputs/buttons)
+- [x] [T3.12] Write UI tests for basic flows. (ChatPanelTest + DebounceTest passing)
 
 ## T4. Context and approvals
 - [x] [T4.1] Implement OverrideTurnContext with cwd/model/effort.

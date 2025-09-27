@@ -11,7 +11,7 @@ class ProtoSenderTest {
     fun restartsOnSendFailureAndRetries() {
         val cfg = CodexProcessConfig(executable = Paths.get("/usr/bin/codex"))
         val recorder = RecordingBackend(failFirst = true)
-        val log = RecordingLog()
+        val log = SenderRecordingLog()
         var reconnected = 0
         val sender = ProtoSender(recorder, cfg, log) { reconnected += 1 }
 
@@ -40,7 +40,7 @@ private class RecordingBackend(private var failFirst: Boolean) : SenderBackend {
     }
 }
 
-private class RecordingLog : LogSink {
+private class SenderRecordingLog : LogSink {
     val lines = mutableListOf<String>()
     override fun info(message: String) { lines += "INFO:$message" }
     override fun warn(message: String) { lines += "WARN:$message" }

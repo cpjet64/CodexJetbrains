@@ -71,6 +71,9 @@ object TelemetryService {
     fun recordSessionStart(sessionId: String? = null) {
         sessionStarts.incrementAndGet()
         currentSessionId = sessionId ?: "session_${System.currentTimeMillis()}"
+        val id = currentSessionId!!
+        val counter = toolInvocationsPerSession.computeIfAbsent(id) { AtomicLong(0) }
+        counter.set(0)
         log.info("Session start: ${sessionStarts.get()} (id: $currentSessionId)")
     }
     
@@ -135,7 +138,23 @@ object TelemetryService {
             session = getSessionStats()
         )
     }
-    
+
+    internal fun resetForTests() {
+        patchApplySuccess.set(0)
+        patchApplyFailure.set(0)
+        patchApplyTotal.set(0)
+        execCommandSuccess.set(0)
+        execCommandFailure.set(0)
+        execCommandTotal.set(0)
+        mcpToolInvocations.set(0)
+        mcpToolFailures.set(0)
+        sessionStarts.set(0)
+        sessionEnds.set(0)
+        sessionErrors.set(0)
+        toolInvocationsPerSession.clear()
+        currentSessionId = null
+    }
+
     data class PatchApplyStats(
         val success: Long,
         val failure: Long,

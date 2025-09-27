@@ -1,10 +1,17 @@
 package dev.curt.codexjb.core
 
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class TelemetryServiceSessionTest {
+
+    @BeforeTest
+    fun reset() {
+        TelemetryService.resetForTests()
+    }
+
 
     @Test
     fun tracksToolInvocationsPerSession() {
