@@ -1,4 +1,4 @@
-# Codex for JetBrains (Unofficial)
+# Codex for JetBrains
 
 Codex for JetBrains is a community-driven IntelliJ Platform plugin that talks to the Codex CLI,
 opening a dedicated ToolWindow so you can review messages, approvals, and applied diffs without
