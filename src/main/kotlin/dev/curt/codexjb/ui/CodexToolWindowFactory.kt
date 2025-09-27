@@ -20,6 +20,8 @@ class CodexToolWindowFactory : ToolWindowFactory {
     val cfg = ApplicationManager.getApplication().getService(CodexConfigService::class.java)
     val proc = ApplicationManager.getApplication().getService(CodexProcessService::class.java)
     val log = CodexLogger.forClass(CodexToolWindowFactory::class.java)
+    val sessionState = SessionState(log)
+    bus.addListener("SessionConfigured") { id, msg -> sessionState.onEvent(id, msg) }
 
     val exe = cfg.resolveExecutable(project.basePath?.let { Path.of(it) })
     if (exe == null) {

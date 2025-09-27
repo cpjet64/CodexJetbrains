@@ -43,7 +43,7 @@ Execution Order
 - [x] [T2.8] Add retry on broken pipe; show reconnect UI.
 - [x] [T2.9] Record SessionConfigured; show session header.
 - [x] [T2.10] Collect TokenCount; update usage indicators.
-- [ ] [T2.11] Persist last session rollout_path in logs. (SessionState exists but unused)
+- [x] [T2.11] Persist last session rollout_path in logs. (SessionState wired to EventBus logging)
 - [x] [T2.12] Unit test correlation logic with fake stream.
 
 ## T3. ToolWindow UI and chat basics
