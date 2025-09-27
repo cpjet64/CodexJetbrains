@@ -44,6 +44,13 @@ class CodexToolWindowFactory : ToolWindowFactory {
       approvalModes.indexOfFirst { it.name == name }.takeIf { it >= 0 }
         ?.let(approvalCombo::setSelectedIndex)
     }
+    val pushStatusBar = {
+      CodexStatusBarController.update(
+        modelCombo.selectedItem as String,
+        effortCombo.selectedItem as String
+      )
+    }
+    pushStatusBar()
     val header = JPanel().apply {
       add(JLabel("Model:"))
       add(modelCombo)
@@ -58,8 +65,16 @@ class CodexToolWindowFactory : ToolWindowFactory {
     header.add(warn)
     modelCombo.accessibleContext.accessibleName = "Model selector"
     effortCombo.accessibleContext.accessibleName = "Effort selector"
-    modelCombo.addActionListener { cfg.lastModel = modelCombo.selectedItem as String }
-    effortCombo.addActionListener { cfg.lastEffort = effortCombo.selectedItem as String }
+    modelCombo.addActionListener {
+      val model = modelCombo.selectedItem as String
+      cfg.lastModel = model
+      pushStatusBar()
+    }
+    effortCombo.addActionListener {
+      val effort = effortCombo.selectedItem as String
+      cfg.lastEffort = effort
+      pushStatusBar()
+    }
     approvalCombo.addActionListener {
       cfg.lastApprovalMode = (approvalCombo.selectedItem as ApprovalMode).name
       warn.isVisible = (approvalCombo.selectedItem as ApprovalMode) == ApprovalMode.FULL_ACCESS
