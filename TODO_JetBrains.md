@@ -20,7 +20,7 @@ Execution Order
 
 ## T1. Project bootstrap and environment
 - [x] [T1.1] Verify JDK 17; set JAVA_HOME; ensure Gradle wrapper works. (JAVA_HOME script added)
-- [!] [T1.2] Run `./gradlew buildPlugin`. (blocked: compile fails; ChatPanel missing addUserMessage)
+- [x] [T1.2] Run `./gradlew buildPlugin`. (pass: 2025-09-26)
 - [/] [T1.3] Add `gson` dep; verify shaded plugin builds. (added; build failure blocks shading)
 - [x] [T1.4] Implement `CodexProcessService` start/stop/send methods tests. (unit coverage added)
 - [x] [T1.5] Create `whoami` check task that runs `codex login` if needed. (auto login helper)
