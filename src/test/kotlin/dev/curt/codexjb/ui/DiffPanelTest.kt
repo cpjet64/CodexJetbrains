@@ -4,6 +4,9 @@ import dev.curt.codexjb.diff.UnifiedDiffParser
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
+import javax.swing.SwingUtilities
 
 class DiffPanelTest {
     
@@ -104,4 +107,49 @@ class DiffPanelTest {
         assertEquals("+line2.5", hunk.lines[3])
         assertEquals(" line3", hunk.lines[4])
     }
+    @Test
+    fun togglesFileInclusionAndApplyState() {
+        val diff = """
+            --- a/one.txt
+            +++ b/one.txt
+            @@ -1 +1 @@
+             one
+            --- a/two.txt
+            +++ b/two.txt
+            @@ -1 +1 @@
+             two
+        """.trimIndent()
+
+        val panel = DiffPanel(diff, onApply = { DiffPanel.ApplyResult(0, 0) })
+        SwingUtilities.invokeAndWait {
+            panel.toggleForTest(0)
+            panel.toggleForTest(1)
+        }
+
+        assertTrue(panel.includedFilesForTest().isEmpty())
+        assertFalse(panel.isApplyEnabledForTest())
+    }
+
+    @Test
+    fun updatesViewWhenSelectingFile() {
+        val diff = """
+            --- a/alpha.txt
+            +++ b/alpha.txt
+            @@ -1 +1 @@
+             alpha
+            --- a/beta.txt
+            +++ b/beta.txt
+            @@ -1 +1 @@
+             beta
+        """.trimIndent()
+
+        val panel = DiffPanel(diff, onApply = { DiffPanel.ApplyResult(0, 0) })
+        SwingUtilities.invokeAndWait {
+            panel.selectForTest(1)
+        }
+
+        val left = panel.leftTextForTest()
+        assertTrue(left.contains("beta"))
+    }
+
 }

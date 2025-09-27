@@ -37,7 +37,7 @@ Execution Order
 - [x] [T2.2] Implement UUID id creation helper.
 - [x] [T2.3] Add listener registry for JSON events.
 - [x] [T2.4] Implement tolerant JSON parsing with try/catch.
-- [x] [T2.5] Add in-flight map idâ†’turn; expire on TaskComplete.
+- [x] [T2.5] Add in-flight map idÃ¢â€ â€™turn; expire on TaskComplete.
 - [x] [T2.6] Render StreamError and Error banners in panel.
 - [x] [T2.7] Implement heartbeat ping (optional no-op submission). (scheduled via HeartbeatScheduler)
 - [x] [T2.8] Add retry on broken pipe; show reconnect UI.
@@ -70,14 +70,14 @@ Execution Order
 - [x] [T4.7] Store per-session approval decisions in memory.
 - [x] [T4.8] Expose a 'Reset approvals' action in panel.
 - [x] [T4.9] Log denied approvals with reason code.
-- [x] [T4.10] Unit test approval requestâ†’response mapping.
+- [x] [T4.10] Unit test approval requestÃ¢â€ â€™response mapping.
 - [x] [T4.11] Persist last approval mode to settings.
 - [x] [T4.12] Add warning banner for Full Access mode.
 
 ## T5. Diff preview and apply
 - [x] [T5.1] Parse TurnDiff unified diff to file hunks.
 - [x] [T5.2] Render two-pane diff viewer for each file. (DiffPanel highlights file selection)
-- [/] [T5.3] Show file selection UI with checkboxes. (JList checkboxes only; unwired)
+- [x] [T5.3] Show file selection UI with checkboxes. (Toggleable list controls now drive apply)
 - [x] [T5.4] Apply patch using WriteCommandAction edits.
 - [x] [T5.5] On PatchApplyBegin show progress bar.
 - [x] [T5.6] On PatchApplyEnd show success or failure summary.
