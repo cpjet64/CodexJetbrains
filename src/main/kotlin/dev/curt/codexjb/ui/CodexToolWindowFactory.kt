@@ -4,6 +4,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
+import com.intellij.openapi.Disposable
 import com.intellij.ui.content.ContentFactory
 import dev.curt.codexjb.core.*
 import dev.curt.codexjb.proto.*
@@ -89,6 +90,12 @@ class CodexToolWindowFactory : ToolWindowFactory {
       log = log,
       onReconnect = { infoBanner.show("Reconnected to Codex CLI") }
     )
+    val heartbeat = HeartbeatScheduler(
+      sendHeartbeat = { sender.send(Heartbeat.buildPingSubmission()) },
+      log = log
+    )
+    sender.setOnSendListener { heartbeat.markActivity() }
+    heartbeat.start()
     val panel = JPanel(BorderLayout())
     val errorBanner = ErrorBanner().apply { wire(bus) }
     val top = JPanel()
@@ -108,6 +115,12 @@ class CodexToolWindowFactory : ToolWindowFactory {
     panel.add(chat, BorderLayout.CENTER)
 
     val content = ContentFactory.getInstance().createContent(panel, "Chat", false)
+    content.setDisposer(object : Disposable {
+      override fun dispose() {
+        sender.setOnSendListener(null)
+        heartbeat.dispose()
+      }
+    })
     toolWindow.contentManager.addContent(content)
 
     val store = ApprovalStore()

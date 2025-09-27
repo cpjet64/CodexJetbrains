@@ -21,9 +21,12 @@ class ProtoSender(
     private val log: LogSink,
     private val onReconnect: () -> Unit = {}
 ) {
+    @Volatile private var onSendListener: (() -> Unit)? = null
+
     fun send(line: String) {
         try {
             backend.send(line)
+            notifySent()
             return
         } catch (_: Exception) {
             log.warn("send failed; attempting restart")
@@ -31,5 +34,14 @@ class ProtoSender(
         val started = backend.start(config, restart = true)
         if (started) onReconnect()
         backend.send(line)
+        notifySent()
+    }
+
+    fun setOnSendListener(listener: (() -> Unit)?) {
+        onSendListener = listener
+    }
+
+    private fun notifySent() {
+        onSendListener?.invoke()
     }
 }
