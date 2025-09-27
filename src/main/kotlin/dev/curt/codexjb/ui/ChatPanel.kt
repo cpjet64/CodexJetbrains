@@ -5,7 +5,9 @@ import dev.curt.codexjb.core.CodexConfigService
 import dev.curt.codexjb.core.CodexLogger
 import dev.curt.codexjb.core.LogSink
 import dev.curt.codexjb.proto.*
+import dev.curt.codexjb.tooling.PatchApplier
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.project.Project
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
@@ -19,6 +21,7 @@ class ChatPanel(
     private val sender: ProtoSender,
     private val bus: EventBus,
     private val turns: TurnRegistry,
+    private val project: Project? = null,
     private val modelProvider: () -> String,
     private val effortProvider: () -> String,
     private val cwdProvider: () -> Path?,
@@ -39,6 +42,7 @@ class ChatPanel(
     private val promptsPanel = JPanel()
     private val promptsList = JList<String>()
     private val refreshPromptsButton = JButton("Refresh")
+    private val diffViews = mutableMapOf<String, JComponent>()
     private var activeTurnId: String? = null
     private var currentAgentArea: JTextArea? = null
     private var lastRefreshTime = 0L
@@ -239,6 +243,10 @@ class ChatPanel(
     }
 
     private fun registerListeners() {
+        bus.addListener("TurnDiff") { id, msg ->
+            val diff = msg.get("diff")?.asString ?: msg.get("text")?.asString ?: return@addListener
+            SwingUtilities.invokeLater { showDiffPanel(id, diff) }
+        }
         bus.addListener("AgentMessageDelta") { id, msg ->
             if (id != activeTurnId) return@addListener
             val delta = msg.get("delta")?.asString ?: return@addListener
@@ -454,10 +462,48 @@ class ChatPanel(
         }
     }
 
+    private fun showDiffPanel(turnId: String, diffText: String) {
+        val project = this.project ?: return
+        val wrapper = JPanel(BorderLayout()).apply {
+            border = BorderFactory.createCompoundBorder(
+                EmptyBorder(12, 0, 0, 0),
+                EmptyBorder(8, 8, 8, 8)
+            )
+        }
+        diffViews[turnId]?.let { existing ->
+            transcript.remove(existing)
+        }
+        val diffPanel = DiffPanel(diffText, { files ->
+            val summary = PatchApplier.apply(project, diffText, files.toSet())
+            val result = DiffPanel.ApplyResult(summary.success, summary.failed)
+            if (result.failed == 0) {
+                SwingUtilities.invokeLater { removeDiffPanel(turnId, wrapper) }
+            }
+            result
+        }) {
+            removeDiffPanel(turnId, wrapper)
+        }
+        wrapper.add(diffPanel, BorderLayout.CENTER)
+        diffViews[turnId] = wrapper
+        transcript.add(wrapper)
+        transcript.revalidate()
+        transcript.repaint()
+        scrollToBottom()
+    }
+
+    private fun removeDiffPanel(turnId: String, component: JComponent) {
+        diffViews.remove(turnId)
+        transcript.remove(component)
+        transcript.revalidate()
+        transcript.repaint()
+    }
+
+
     fun clearTranscript() {
         transcript.removeAll()
         transcript.revalidate()
         transcript.repaint()
+        diffViews.clear()
     }
 
     internal fun transcriptCount(): Int = transcript.componentCount

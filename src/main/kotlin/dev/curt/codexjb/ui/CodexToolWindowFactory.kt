@@ -108,6 +108,7 @@ class CodexToolWindowFactory : ToolWindowFactory {
       sender = sender,
       bus = bus,
       turns = turns,
+      project = project,
       modelProvider = { modelCombo.selectedItem as String },
       effortProvider = { effortCombo.selectedItem as String },
       cwdProvider = { project.basePath?.let { Path.of(it) } }

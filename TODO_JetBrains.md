@@ -76,7 +76,7 @@ Execution Order
 
 ## T5. Diff preview and apply
 - [x] [T5.1] Parse TurnDiff unified diff to file hunks.
-- [/] [T5.2] Render two-pane diff viewer for each file. (JTextArea split only; not wired)
+- [x] [T5.2] Render two-pane diff viewer for each file. (DiffPanel highlights file selection)
 - [/] [T5.3] Show file selection UI with checkboxes. (JList checkboxes only; unwired)
 - [x] [T5.4] Apply patch using WriteCommandAction edits.
 - [x] [T5.5] On PatchApplyBegin show progress bar.
