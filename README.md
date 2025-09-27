@@ -1,11 +1,53 @@
-# Codex for JetBrains (Unofficial) — Starter
+# Codex for JetBrains (Unofficial)
 
-This is a minimal IntelliJ Platform plugin scaffold that integrates with the Codex CLI by
-spawning `codex proto` and exchanging JSON lines over stdin/stdout. It provides a ToolWindow
-named "Codex", a simple chat panel, and an editor action "Ask Codex" that sends the current
-selection to the running session.
+Codex for JetBrains is a community-driven IntelliJ Platform plugin that talks to the Codex CLI,
+opening a dedicated ToolWindow so you can review messages, approvals, and applied diffs without
+leaving the IDE. The codebase targets IntelliJ IDEA 2023.3 and relies on JDK 17 for builds and
+runtime.
 
-Build: `./gradlew buildPlugin` (Java 17 required). Install the ZIP from `build/distributions`.
+> This repository is under active construction. Follow day-to-day progress in `TODO_JetBrains.md`.
+
+## Current Capabilities
+- Launch the Codex ToolWindow and wire it to a long-lived Codex CLI session.
+- Correlate Codex protocol events, retries, and telemetry for troubleshooting.
+- Preview turn diffs and apply them through IntelliJ write actions with telemetry hooks.
+- Surface CLI approval requests, status-bar indicators, and diagnostics helpers.
+- Stream exec output with ANSI coloring while exposing cancel and copy affordances.
+
+Several chat UI tasks remain in progress; see the TODO tracker for the exact breakdown.
 
 ## Prerequisites
-Ensure `JAVA_HOME` points to a Java 17 runtime before building. Run `scripts/dev/check-java.sh` to verify the configuration.
+- Java Development Kit 17 (`JAVA_HOME` must point to it before running Gradle).
+- Codex CLI available on your PATH or configured in the plugin settings.
+- IntelliJ-based IDE 2023.3 or newer for installation and sandbox testing.
+
+## Getting Started
+1. Clone the repository and open it in IntelliJ IDEA or another JetBrains IDE.
+2. Run `./gradlew buildPlugin` to compile sources, execute tests, and produce a ZIP under
+   `build/distributions`.
+3. Install the ZIP inside your IDE via *Settings > Plugins > Gear Icon > Install Plugin from Disk*.
+4. Launch a sandbox for manual testing with `./gradlew runIde`.
+
+## Development Workflow
+- Keep `JAVA_HOME` aligned with JDK 17; run `scripts/dev/check-java.ps1` (Windows) or
+  `scripts/dev/check-java.sh` (Unix) if you are unsure.
+- Execute `./gradlew test` before committing; add focused tests when touching UI or protocol
+  logic.
+- Track feature status in `TODO_JetBrains.md` and update the checkboxes as you move tasks
+  from "Not started" to "In progress" or "Completed".
+- Follow the commit format `[T<task>.<sub>] <summary>; post-test=<pass>; compare=<stdout>`
+  as documented in `AGENTS.md`.
+
+## Repository Layout
+- `src/main/kotlin` - plugin sources grouped by feature packages (`core`, `proto`, `ui`).
+- `src/main/resources` - plugin metadata, icons, and descriptors (`META-INF/plugin.xml`).
+- `src/test/kotlin` - unit and UI tests mirroring the production package structure.
+- `scripts` - helper scripts for environment setup and diagnostics.
+- `TODO_JetBrains.md` - authoritative backlog and per-task status log.
+
+## Contributing
+Please read `CONTRIBUTING.md` for coding style, testing expectations, and pull request
+etiquette. External contributions are welcome while the project is still stabilizing.
+
+## License
+The project is distributed under the MIT License. See `LICENSE` for details.

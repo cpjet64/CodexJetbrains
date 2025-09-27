@@ -20,8 +20,8 @@ Execution Order
 
 ## T1. Project bootstrap and environment
 - [x] [T1.1] Verify JDK 17; set JAVA_HOME; ensure Gradle wrapper works. (JAVA_HOME script added)
-- [x] [T1.2] Run `./gradlew buildPlugin`; fix any version errors. (Wrapper+WSL tweaks)
-- [x] [T1.3] Add `gson` dep; verify shaded plugin builds. (Zip bundles gson)
+- [!] [T1.2] Run `./gradlew buildPlugin`. (blocked: compile fails; ChatPanel missing addUserMessage)
+- [/] [T1.3] Add `gson` dep; verify shaded plugin builds. (added; build failure blocks shading)
 - [x] [T1.4] Implement `CodexProcessService` start/stop/send methods tests. (unit coverage added)
 - [x] [T1.5] Create `whoami` check task that runs `codex login` if needed. (auto login helper)
 - [x] [T1.6] Add PATH discovery for `codex` on macOS/Linux and Windows.
@@ -30,35 +30,35 @@ Execution Order
 - [x] [T1.9] Add logger facade; route to `idea.log` with categories.
 - [x] [T1.10] Add configuration service storing CLI path and flags.
 - [x] [T1.11] Create diagnostics action to dump env and CLI version.
-- [x] [T1.12] Add status bar widget: session model and effort.
+- [/] [T1.12] Add status bar widget: session model and effort. (widget exists but not updated)
 
 ## T2. Protocol client and correlation
 - [x] [T2.1] Model Submission and Event envelopes (id, op; id, msg).
 - [x] [T2.2] Implement UUID id creation helper.
 - [x] [T2.3] Add listener registry for JSON events.
 - [x] [T2.4] Implement tolerant JSON parsing with try/catch.
-- [x] [T2.5] Add in-flight map id→turn; expire on TaskComplete.
+- [x] [T2.5] Add in-flight map idâ†’turn; expire on TaskComplete.
 - [x] [T2.6] Render StreamError and Error banners in panel.
-- [x] [T2.7] Implement heartbeat ping (optional no-op submission).
+- [ ] [T2.7] Implement heartbeat ping (optional no-op submission). (no heartbeat scheduling present)
 - [x] [T2.8] Add retry on broken pipe; show reconnect UI.
 - [x] [T2.9] Record SessionConfigured; show session header.
 - [x] [T2.10] Collect TokenCount; update usage indicators.
-- [x] [T2.11] Persist last session rollout_path in logs.
+- [ ] [T2.11] Persist last session rollout_path in logs. (SessionState exists but unused)
 - [x] [T2.12] Unit test correlation logic with fake stream.
 
 ## T3. ToolWindow UI and chat basics
-- [x] [T3.1] Create ToolWindow with input box and send button.
-- [x] [T3.2] Render user bubble on submit.
-- [x] [T3.3] Append AgentMessageDelta tokens live.
-- [x] [T3.4] Seal message on AgentMessage final event.
-- [x] [T3.5] Add clear chat action; confirm before clearing.
-- [x] [T3.6] Add copy message to clipboard action.
-- [x] [T3.7] Add model and reasoning selectors in header.
-- [x] [T3.8] Persist last model/effort to settings.
-- [x] [T3.9] Disable Send while a turn is active.
-- [x] [T3.10] Show spinner while streaming.
-- [x] [T3.11] Add accessibility labels for controls.
-- [x] [T3.12] Write UI tests for basic flows.
+- [ ] [T3.1] Create ToolWindow with input box and send button. (blocked: ChatPanel compile failure)
+- [ ] [T3.2] Render user bubble on submit. (blocked by T3.1)
+- [ ] [T3.3] Append AgentMessageDelta tokens live. (blocked by T3.1)
+- [ ] [T3.4] Seal message on AgentMessage final event. (blocked by T3.1)
+- [ ] [T3.5] Add clear chat action; confirm before clearing. (blocked by T3.1)
+- [ ] [T3.6] Add copy message to clipboard action. (blocked by T3.1)
+- [ ] [T3.7] Add model and reasoning selectors in header. (controls exist but compile blocked)
+- [ ] [T3.8] Persist last model/effort to settings. (blocked by T3.1)
+- [ ] [T3.9] Disable Send while a turn is active. (blocked by T3.1)
+- [ ] [T3.10] Show spinner while streaming. (blocked by T3.1)
+- [ ] [T3.11] Add accessibility labels for controls. (blocked by T3.1)
+- [ ] [T3.12] Write UI tests for basic flows. (tests exist but blocked by T3.1 compile failure)
 
 ## T4. Context and approvals
 - [x] [T4.1] Implement OverrideTurnContext with cwd/model/effort.
@@ -70,90 +70,90 @@ Execution Order
 - [x] [T4.7] Store per-session approval decisions in memory.
 - [x] [T4.8] Expose a 'Reset approvals' action in panel.
 - [x] [T4.9] Log denied approvals with reason code.
-- [x] [T4.10] Unit test approval request→response mapping.
+- [x] [T4.10] Unit test approval requestâ†’response mapping.
 - [x] [T4.11] Persist last approval mode to settings.
 - [x] [T4.12] Add warning banner for Full Access mode.
 
 ## T5. Diff preview and apply
 - [x] [T5.1] Parse TurnDiff unified diff to file hunks.
-- [x] [T5.2] Render two-pane diff viewer for each file.
-- [x] [T5.3] Show file tree with checkboxes to include/exclude files.
+- [/] [T5.2] Render two-pane diff viewer for each file. (JTextArea split only; not wired)
+- [/] [T5.3] Show file selection UI with checkboxes. (JList checkboxes only; unwired)
 - [x] [T5.4] Apply patch using WriteCommandAction edits.
 - [x] [T5.5] On PatchApplyBegin show progress bar.
 - [x] [T5.6] On PatchApplyEnd show success or failure summary.
-- [x] [T5.7] Add Discard Patch action to close the turn.
-- [x] [T5.8] Auto-open changed files option (setting).
-- [x] [T5.9] Add Git integration: stage applied changes (optional).
-- [x] [T5.10] Handle conflicts gracefully with a warning.
-- [/] [T5.11] Unit tests with sample diffs and virtual files. (partial: engine only)
+- [/] [T5.7] Add Discard Patch action to close the turn. (callback only; no caller wiring)
+- [ ] [T5.8] Auto-open changed files option (setting). (flag exists; no settings UI to toggle)
+- [/] [T5.9] Add Git integration: stage applied changes (optional). (backend present; no toggle/UI)
+- [ ] [T5.10] Handle patch conflicts gracefully. (no user warning yet)
+- [/] [T5.11] Unit tests with sample diffs and virtual files. (parser only; no VirtualFile tests)
 - [x] [T5.12] Telemetry counters for apply success/failure.
 
 ## T6. Exec command streaming
-- [x] [T6.1] Create console pane for ExecCommandBegin events.
-- [x] [T6.2] Append ExecCommandOutputDelta chunks to console.
-- [x] [T6.3] On ExecCommandEnd print exit code and duration.
-- [x] [T6.4] Honor cwd; show it in console header.
-- [x] [T6.5] Add Kill process action to send cancel (if supported).
-- [x] [T6.6] Write ANSI color handling for basic codes.
-- [x] [T6.7] Allow copy all to clipboard from console.
-- [x] [T6.8] Option to auto-open console on exec start.
-- [x] [T6.9] Limit buffer size to avoid memory pressure.
-- [x] [T6.10] Unit test console with canned output events.
-- [x] [T6.11] Persist console visibility across sessions.
-- [ ] [T6.12] Show approval decision status in console header.
+- [ ] [T6.1] Create console pane for ExecCommandBegin events. (panel exists but never instantiated)
+- [ ] [T6.2] Append ExecCommandOutputDelta chunks to console. (blocked by T6.1 wiring)
+- [ ] [T6.3] On ExecCommandEnd print exit code and duration. (blocked by T6.1 wiring)
+- [ ] [T6.4] Honor cwd; show it in console header. (blocked by T6.1 wiring)
+- [ ] [T6.5] Add Kill process action to send cancel (if supported). (blocked by T6.1 wiring)
+- [ ] [T6.6] Write ANSI color handling for basic codes. (code exists but console unwired)
+- [ ] [T6.7] Allow copy all to clipboard from console. (blocked by T6.1 wiring)
+- [ ] [T6.8] Option to auto-open console on exec start. (no integration)
+- [ ] [T6.9] Limit buffer size to avoid memory pressure. (blocked by T6.1 wiring)
+- [ ] [T6.10] Unit test console with canned output events. (tests absent)
+- [ ] [T6.11] Persist console visibility across sessions. (no storage or wiring)
+- [ ] [T6.12] Show approval decision status in console header. (blocked by T6.1 wiring)
 
 ## T7. MCP tools and prompts
-- [/] [T7.1] Send ListMcpTools and render tool list with descriptions. (partial: model only)
-- [ ] [T7.2] Add run tool action if CLI emits tool call ops.
-- [ ] [T7.3] Show tool call begin/end with timing in transcript.
-- [x] [T7.4] ListCustomPrompts and render prompt library panel.
+- [ ] [T7.1] Send ListMcpTools; render tool list. (UI exists; request lacks envelope)
+- [ ] [T7.2] Add run tool action if CLI emits tool call ops. (request still raw JSON)
+- [x] [T7.3] Show tool call begin/end with timing in transcript.
+- [ ] [T7.4] ListCustomPrompts and render prompt library panel. (request lacks envelope)
 - [x] [T7.5] Insert prompt into input box on click.
 - [x] [T7.6] Persist last used tool and prompt.
-- [ ] [T7.7] Handle missing MCP servers gracefully.
+- [x] [T7.7] Handle missing MCP servers gracefully.
 - [x] [T7.8] Add refresh tools button; debounce calls.
 - [x] [T7.9] Unit tests: synthetic MCP list response.
-- [x] [T7.10] Telemetry: count tool invocations per session.
+- [ ] [T7.10] Telemetry: count tool invocations per session. (only increments on tool list events)
 - [ ] [T7.11] Expose MCP server config link in settings.
 - [x] [T7.12] Add hover help for tool fields.
 
 ## T8. Settings and configuration
-- [ ] [T8.1] Add Settings page: CLI path, WSL toggle, open on startup.
-- [ ] [T8.2] Add model default and reasoning default settings.
-- [ ] [T8.3] Add approval mode default setting.
-- [ ] [T8.4] Add sandbox policy presets (workspace-write, full).
-- [ ] [T8.5] Validate CLI path and version on save.
-- [ ] [T8.6] Add 'Test connection' button to run whoami.
-- [ ] [T8.7] Persist settings per project and globally.
-- [ ] [T8.8] Export/import settings as JSON.
-- [ ] [T8.9] Unit tests for settings serialization.
-- [ ] [T8.10] Guard against invalid values with messages.
-- [ ] [T8.11] Add reset-to-defaults button.
-- [ ] [T8.12] Ensure no UI freeze during validation.
+- [ ] [T8.1] Add Settings page: CLI path, WSL toggle, open on startup. (no settings UI exists)
+- [ ] [T8.2] Add model default and reasoning default settings. (no settings UI exists)
+- [ ] [T8.3] Add approval mode default setting. (no settings UI exists)
+- [ ] [T8.4] Add sandbox policy presets (workspace-write, full). (no settings UI exists)
+- [ ] [T8.5] Validate CLI path and version on save. (no settings UI exists)
+- [ ] [T8.6] Add 'Test connection' button to run whoami. (no settings UI exists)
+- [ ] [T8.7] Persist settings per project and globally. (no settings UI exists)
+- [ ] [T8.8] Export/import settings as JSON. (no settings UI exists)
+- [ ] [T8.9] Unit tests for settings serialization. (no settings code)
+- [ ] [T8.10] Guard against invalid values with messages. (no settings UI exists)
+- [ ] [T8.11] Add reset-to-defaults button. (no settings UI exists)
+- [ ] [T8.12] Ensure no UI freeze during validation. (no settings UI exists)
 
 ## T9. Resilience and diagnostics
-- [ ] [T9.1] Add log file rotation and levels (info/warn/error).
-- [ ] [T9.2] Capture CLI stderr lines to a Diagnostics tab.
-- [ ] [T9.3] Add copy Diagnostics to clipboard action.
-- [ ] [T9.4] Detect stale process and auto-restart once.
-- [ ] [T9.5] Backoff strategy on repeated failures.
-- [ ] [T9.6] Expose a Report Issue action with environment dump.
-- [ ] [T9.7] Add a health indicator in the status bar.
-- [ ] [T9.8] Track average tokens/sec for last turn.
-- [ ] [T9.9] Time each phase: stream, diff, apply, exec.
-- [ ] [T9.10] Unit tests for restart/backoff logic.
-- [ ] [T9.11] CI workflow for headless build with Gradle.
-- [ ] [T9.12] Document troubleshooting steps in README.
+- [ ] [T9.1] Add log file rotation and levels (info/warn/error). (logger facade only)
+- [ ] [T9.2] Capture CLI stderr lines to a Diagnostics tab. (no diagnostics UI)
+- [ ] [T9.3] Add copy Diagnostics to clipboard action. (no diagnostics UI)
+- [ ] [T9.4] Detect stale process and auto-restart once. (no monitoring logic)
+- [ ] [T9.5] Backoff strategy on repeated failures. (no retry/backoff)
+- [ ] [T9.6] Expose a Report Issue action with environment dump. (action missing)
+- [ ] [T9.7] Add a health indicator in the status bar. (status widget static)
+- [ ] [T9.8] Track average tokens/sec for last turn. (no metrics code)
+- [ ] [T9.9] Time each phase: stream, diff, apply, exec. (no timing code)
+- [ ] [T9.10] Unit tests for restart/backoff logic. (logic missing)
+- [ ] [T9.11] CI workflow for headless build with Gradle. (no workflow)
+- [/] [T9.12] Document troubleshooting steps in README. (initial README scaffold)
 
 ## T10. Packaging and parity checks
-- [ ] [T10.1] Add plugin icon and description polish.
- - [!] [T10.2] Run buildPlugin and verify produced ZIP installs. (blocked: install check; ZIP exists)
-- [ ] [T10.3] Smoke test on IntelliJ IDEA and Rider.
-- [ ] [T10.4] Create parity checklist from VSIX manifest items.
-- [ ] [T10.5] Verify editor context action behavior parity.
-- [ ] [T10.6] Verify ToolWindow default placement parity.
-- [ ] [T10.7] Verify keybinding availability and conflicts.
-- [ ] [T10.8] Add EULA/branding notices and disclaimers.
-- [ ] [T10.9] Write CHANGELOG for 0.1.0.
-- [ ] [T10.10] Tag release and export artifacts.
-- [ ] [T10.11] Post-tests for each earlier task must pass.
-- [ ] [T10.12] Prepare demo GIFs and docs.
+- [ ] [T10.1] Add plugin icon and description polish. (no assets or copy updates)
+- [!] [T10.2] Run buildPlugin; verify ZIP installs. (blocked: ChatPanel compile error)
+- [ ] [T10.3] Smoke test on IntelliJ IDEA and Rider. (not attempted)
+- [ ] [T10.4] Create parity checklist from VSIX manifest items. (not started)
+- [ ] [T10.5] Verify editor context action behavior parity. (no verification done)
+- [ ] [T10.6] Verify ToolWindow default placement parity. (no verification done)
+- [ ] [T10.7] Verify keybinding availability and conflicts. (no verification done)
+- [ ] [T10.8] Add EULA/branding notices and disclaimers. (not started)
+- [ ] [T10.9] Write CHANGELOG for 0.1.0. (no changelog)
+- [ ] [T10.10] Tag release and export artifacts. (not started)
+- [ ] [T10.11] Post-tests for each earlier task must pass. (blocked by failing build)
+- [ ] [T10.12] Prepare demo GIFs and docs. (not started)

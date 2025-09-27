@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Task tracker (TODO_JetBrains.md)
+    url: https://github.com/cpjet64/CodexJetbrains/blob/main/TODO_JetBrains.md
+    about: Check the current backlog before opening a new issue.

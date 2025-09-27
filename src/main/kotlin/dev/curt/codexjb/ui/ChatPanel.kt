@@ -99,6 +99,18 @@ class ChatPanel(
             }
         }
         
+        // Add double-click listener to run tool
+        toolsList.addMouseListener(object : java.awt.event.MouseAdapter() {
+            override fun mouseClicked(e: java.awt.event.MouseEvent) {
+                if (e.clickCount == 2) {
+                    val selectedTool = toolsList.selectedValue
+                    if (selectedTool != null && !selectedTool.startsWith("⚠️")) {
+                        runTool(selectedTool)
+                    }
+                }
+            }
+        })
+        
         toolsPanel.add(JScrollPane(toolsList), BorderLayout.CENTER)
         
         // Add refresh button action listener with debouncing
@@ -244,22 +256,56 @@ class ChatPanel(
             prompts.onEvent(id, msg)
             SwingUtilities.invokeLater { updatePromptsList() }
         }
+        bus.addListener("McpToolsError") { id, msg ->
+            mcpTools.onEvent(id, msg)
+            SwingUtilities.invokeLater { updateToolsList() }
+        }
+        bus.addListener("McpServerUnavailable") { id, msg ->
+            mcpTools.onEvent(id, msg)
+            SwingUtilities.invokeLater { updateToolsList() }
+        }
+        bus.addListener("ToolCallBegin") { id, msg ->
+            val toolName = msg.get("tool")?.asString ?: "Unknown"
+            val timestamp = System.currentTimeMillis()
+            SwingUtilities.invokeLater { 
+                addToolCallMessage("🔧 Starting tool: $toolName", timestamp)
+            }
+        }
+        bus.addListener("ToolCallEnd") { id, msg ->
+            val toolName = msg.get("tool")?.asString ?: "Unknown"
+            val duration = msg.get("duration_ms")?.asLong ?: 0L
+            val success = msg.get("success")?.asBoolean ?: false
+            val status = if (success) "✅" else "❌"
+            SwingUtilities.invokeLater { 
+                addToolCallMessage("$status Tool '$toolName' completed in ${duration}ms", System.currentTimeMillis())
+            }
+        }
     }
-    
+
     private fun updateToolsList() {
-        val toolNames = mcpTools.tools.map { it.name }
-        toolsList.model = DefaultListModel<String>().apply {
-            toolNames.forEach { addElement(it) }
-        }
-        
-        // Restore last used tool selection
-        val config = ApplicationManager.getApplication().getService(CodexConfigService::class.java)
-        val lastUsedTool = config.lastUsedTool
-        if (lastUsedTool != null && toolNames.contains(lastUsedTool)) {
-            toolsList.setSelectedValue(lastUsedTool, true)
+        if (mcpTools.hasError()) {
+            // Show error message in the tools list
+            val errorMsg = mcpTools.getErrorMessage() ?: "MCP server unavailable"
+            toolsList.model = DefaultListModel<String>().apply {
+                addElement("⚠️ Error: $errorMsg")
+                addElement("")
+                addElement("Click 'Refresh' to retry")
+            }
+        } else {
+            val toolNames = mcpTools.tools.map { it.name }
+            toolsList.model = DefaultListModel<String>().apply {
+                toolNames.forEach { addElement(it) }
+            }
+            
+            // Restore last used tool selection
+            val config = ApplicationManager.getApplication().getService(CodexConfigService::class.java)
+            val lastUsedTool = config.lastUsedTool
+            if (lastUsedTool != null && toolNames.contains(lastUsedTool)) {
+                toolsList.setSelectedValue(lastUsedTool, true)
+            }
         }
     }
-    
+
     private fun updatePromptsList() {
         val promptNames = prompts.prompts.map { it.name }
         promptsList.model = DefaultListModel<String>().apply {
@@ -273,21 +319,48 @@ class ChatPanel(
             promptsList.setSelectedValue(lastUsedPrompt, true)
         }
     }
-    
+
+    private fun sendSubmission(type: String, configure: JsonObject.() -> Unit = {}) {
+        val body = JsonObject().apply {
+            addProperty("type", type)
+            configure()
+        }
+        val envelope = SubmissionEnvelope(Ids.newId(), "Submit", body)
+        sender.send(EnvelopeJson.encodeSubmission(envelope))
+    }
+
     private fun refreshTools() {
-        // Send a request to refresh MCP tools
-        val request = JsonObject()
-        request.addProperty("type", "ListMcpTools")
-        sender.send(request.toString())
+        sendSubmission("ListMcpTools")
         log.info("Refreshing MCP tools...")
     }
-    
+
     private fun refreshPrompts() {
-        // Send a request to refresh prompts
-        val request = JsonObject()
-        request.addProperty("type", "ListCustomPrompts")
-        sender.send(request.toString())
+        sendSubmission("ListCustomPrompts")
         log.info("Refreshing prompts...")
+    }
+
+    private fun runTool(toolName: String) {
+        sendSubmission("RunTool") {
+            addProperty("tool", toolName)
+        }
+        log.info("Running tool: $toolName")
+
+        addUserMessage("Running tool: $toolName")
+    }
+
+    private fun addToolCallMessage(text: String, timestamp: Long) {
+        val timeStr = java.text.SimpleDateFormat("HH:mm:ss").format(java.util.Date(timestamp))
+        val message = JTextArea("[$timeStr] $text")
+        message.isEditable = false
+        message.background = Color(240, 248, 255) // Light blue background for tool calls
+        message.border = EmptyBorder(4, 8, 4, 8)
+        message.lineWrap = true
+        message.wrapStyleWord = true
+        message.font = message.font.deriveFont(java.awt.Font.BOLD)
+        
+        transcript.add(message)
+        transcript.revalidate()
+        scroll.verticalScrollBar.value = scroll.verticalScrollBar.maximum
     }
 
     private fun onSend(@Suppress("UNUSED_PARAMETER") e: ActionEvent) {
@@ -326,7 +399,7 @@ class ChatPanel(
         return EnvelopeJson.encodeSubmission(SubmissionEnvelope(id, "Submit", body))
     }
 
-    private fun renderUserBubble(text: String) {
+    private fun addUserMessage(text: String) {
         val label = JLabel(text)
         label.isOpaque = true
         label.background = Color(0xE8F0FE)
@@ -336,6 +409,10 @@ class ChatPanel(
         transcript.add(label)
         transcript.revalidate()
         scrollToBottom()
+    }
+
+    private fun renderUserBubble(text: String) {
+        addUserMessage(text)
         input.text = ""
     }
 

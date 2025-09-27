@@ -18,6 +18,7 @@ class ExecConsolePanel : JPanel(BorderLayout()) {
     private val kill = JButton("Kill Process")
     private var currentProcess: Process? = null
     private val maxBufferSize = 100_000 // 100KB limit
+    private var approvalStatus: String? = null
 
     init {
         area.isEditable = false
@@ -67,6 +68,7 @@ class ExecConsolePanel : JPanel(BorderLayout()) {
         header.text = "Exec: $command @ $cwd"
         area.text = ""
         kill.isEnabled = true
+        updateHeader() // Apply approval status if any
     }
 
     fun onDelta(chunk: String) { 
@@ -100,6 +102,17 @@ class ExecConsolePanel : JPanel(BorderLayout()) {
     fun setCurrentProcess(process: Process?) {
         currentProcess = process
         kill.isEnabled = process?.isAlive == true
+    }
+    
+    fun setApprovalStatus(status: String?) {
+        approvalStatus = status
+        updateHeader()
+    }
+    
+    private fun updateHeader() {
+        val baseText = header.text.replace(Regex(" \\[.*\\]$"), "") // Remove existing approval status
+        val approvalText = if (approvalStatus != null) " [$approvalStatus]" else ""
+        header.text = baseText + approvalText
     }
 }
 
