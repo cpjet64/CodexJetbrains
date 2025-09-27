@@ -1,10 +1,10 @@
 package dev.curt.codexjb.ui
 
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.project.Project
 import dev.curt.codexjb.core.CodexConfigService
 import dev.curt.codexjb.diff.UnifiedDiffParser
 import dev.curt.codexjb.tooling.PatchApplier
+import com.intellij.openapi.project.Project
 import org.jetbrains.annotations.TestOnly
 import java.awt.BorderLayout
 import java.awt.FlowLayout
@@ -15,13 +15,14 @@ import java.awt.event.MouseAdapter
 import java.awt.event.MouseEvent
 import java.util.ArrayList
 import javax.swing.AbstractAction
+import javax.swing.BorderFactory
 import javax.swing.Box
 import javax.swing.BoxLayout
 import javax.swing.DefaultListModel
 import javax.swing.JButton
 import javax.swing.JCheckBox
-import javax.swing.JLabel
 import javax.swing.JList
+import javax.swing.JLabel
 import javax.swing.JOptionPane
 import javax.swing.JPanel
 import javax.swing.JProgressBar
@@ -32,6 +33,7 @@ import javax.swing.KeyStroke
 import javax.swing.ListCellRenderer
 import javax.swing.ListSelectionModel
 import javax.swing.SwingUtilities
+import javax.swing.border.EmptyBorder
 
 class DiffPanel(
     diffText: String,
@@ -77,7 +79,8 @@ class DiffPanel(
         })
 
         for (p in patches) {
-            listModel.addElement(FileItem(p.newPath ?: p.oldPath ?: "", true))
+            val name = p.newPath ?: p.oldPath ?: continue
+            listModel.addElement(FileItem(name, true))
         }
 
         leftViewer.isEditable = false
@@ -194,11 +197,14 @@ class DiffPanel(
             }
             SwingUtilities.invokeLater {
                 progress.isVisible = false
+                val message = "Patch apply: success=${res.success} failed=${res.failed}"
+                val type = if (res.failed > 0) JOptionPane.ERROR_MESSAGE else JOptionPane.INFORMATION_MESSAGE
+                val note = if (res.failed > 0) "\nSome hunks could not be applied. Resolve conflicts manually and retry." else ""
                 JOptionPane.showMessageDialog(
                     this,
-                    "Patch apply: success=${res.success} failed=${res.failed}",
+                    message + note,
                     "Patch Apply",
-                    JOptionPane.INFORMATION_MESSAGE
+                    type
                 )
                 updateApplyEnabled()
             }

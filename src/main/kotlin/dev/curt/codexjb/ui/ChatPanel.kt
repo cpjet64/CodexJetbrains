@@ -108,7 +108,7 @@ class ChatPanel(
             override fun mouseClicked(e: java.awt.event.MouseEvent) {
                 if (e.clickCount == 2) {
                     val selectedTool = toolsList.selectedValue
-                    if (selectedTool != null && !selectedTool.startsWith("⚠️")) {
+                    if (selectedTool != null && !selectedTool.startsWith("âš ï¸")) {
                         runTool(selectedTool)
                     }
                 }
@@ -276,14 +276,14 @@ class ChatPanel(
             val toolName = msg.get("tool")?.asString ?: "Unknown"
             val timestamp = System.currentTimeMillis()
             SwingUtilities.invokeLater { 
-                addToolCallMessage("🔧 Starting tool: $toolName", timestamp)
+                addToolCallMessage("ðŸ”§ Starting tool: $toolName", timestamp)
             }
         }
         bus.addListener("ToolCallEnd") { id, msg ->
             val toolName = msg.get("tool")?.asString ?: "Unknown"
             val duration = msg.get("duration_ms")?.asLong ?: 0L
             val success = msg.get("success")?.asBoolean ?: false
-            val status = if (success) "✅" else "❌"
+            val status = if (success) "âœ…" else "âŒ"
             SwingUtilities.invokeLater { 
                 addToolCallMessage("$status Tool '$toolName' completed in ${duration}ms", System.currentTimeMillis())
             }
@@ -295,7 +295,7 @@ class ChatPanel(
             // Show error message in the tools list
             val errorMsg = mcpTools.getErrorMessage() ?: "MCP server unavailable"
             toolsList.model = DefaultListModel<String>().apply {
-                addElement("⚠️ Error: $errorMsg")
+                addElement("âš ï¸ Error: $errorMsg")
                 addElement("")
                 addElement("Click 'Refresh' to retry")
             }
@@ -496,6 +496,7 @@ class ChatPanel(
         transcript.remove(component)
         transcript.revalidate()
         transcript.repaint()
+        turns.remove(turnId)
     }
 
 

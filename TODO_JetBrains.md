@@ -81,11 +81,11 @@ Execution Order
 - [x] [T5.4] Apply patch using WriteCommandAction edits.
 - [x] [T5.5] On PatchApplyBegin show progress bar.
 - [x] [T5.6] On PatchApplyEnd show success or failure summary.
-- [/] [T5.7] Add Discard Patch action to close the turn. (callback only; no caller wiring)
-- [ ] [T5.8] Auto-open changed files option (setting). (flag exists; no settings UI to toggle)
-- [/] [T5.9] Add Git integration: stage applied changes (optional). (backend present; no toggle/UI)
-- [ ] [T5.10] Handle patch conflicts gracefully. (no user warning yet)
-- [/] [T5.11] Unit tests with sample diffs and virtual files. (parser only; no VirtualFile tests)
+- [x] [T5.7] Add Discard Patch action to close the turn. (Diff panel discard clears UI/turn)
+- [x] [T5.8] Auto-open changed files option (setting). (Diff panel checkbox updates config)
+- [x] [T5.9] Add Git integration: stage applied changes (optional). (Diff panel checkbox toggles staging)
+- [x] [T5.10] Handle patch conflicts gracefully. (Apply dialog surfaces conflict warning)
+- [x] [T5.11] Unit tests with sample diffs and virtual files. (DiffPanel + PatchApplier integration tests)
 - [x] [T5.12] Telemetry counters for apply success/failure.
 
 ## T6. Exec command streaming
