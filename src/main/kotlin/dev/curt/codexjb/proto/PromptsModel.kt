@@ -2,7 +2,6 @@ package dev.curt.codexjb.proto
 
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
-import dev.curt.codexjb.core.TelemetryService
 
 data class Prompt(val name: String, val description: String, val content: String)
 
@@ -11,18 +10,19 @@ class PromptsModel {
         private set
 
     fun onEvent(id: String, msg: JsonObject) {
-        if (msg.get("type")?.asString != "PromptsList") return
-        val arr = msg.getAsJsonArray("prompts") ?: JsonArray()
-        prompts = arr.mapNotNull {
-            it.asJsonObject.let { o ->
-                val name = o.get("name")?.asString
-                val description = o.get("description")?.asString ?: ""
-                val content = o.get("content")?.asString ?: ""
-                if (name != null) {
-                    TelemetryService.recordMcpToolInvocation() // Track prompt usage
-                    Prompt(name, description, content)
-                } else null
-            }
+        val type = msg.get("type")?.asString ?: return
+        if (type.lowercase() !in setOf("listcustompromptsresponse", "list_custom_prompts_response", "promptslist")) return
+        val arr = when {
+            msg.get("custom_prompts")?.isJsonArray == true -> msg.getAsJsonArray("custom_prompts")
+            msg.get("prompts")?.isJsonArray == true -> msg.getAsJsonArray("prompts")
+            else -> JsonArray()
+        }
+        prompts = arr.mapNotNull { element ->
+            val obj = element.takeIf { it.isJsonObject }?.asJsonObject ?: return@mapNotNull null
+            val name = obj.get("name")?.asString ?: return@mapNotNull null
+            val description = obj.get("description")?.asString ?: obj.get("summary")?.asString ?: ""
+            val content = obj.get("content")?.asString ?: obj.get("prompt")?.asString ?: ""
+            Prompt(name, description, content)
         }
     }
 }

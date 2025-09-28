@@ -89,46 +89,46 @@ Execution Order
 - [x] [T5.12] Telemetry counters for apply success/failure.
 
 ## T6. Exec command streaming
-- [ ] [T6.1] Create console pane for ExecCommandBegin events. (panel exists but never instantiated)
-- [ ] [T6.2] Append ExecCommandOutputDelta chunks to console. (blocked by T6.1 wiring)
-- [ ] [T6.3] On ExecCommandEnd print exit code and duration. (blocked by T6.1 wiring)
-- [ ] [T6.4] Honor cwd; show it in console header. (blocked by T6.1 wiring)
-- [ ] [T6.5] Add Kill process action to send cancel (if supported). (blocked by T6.1 wiring)
-- [ ] [T6.6] Write ANSI color handling for basic codes. (code exists but console unwired)
-- [ ] [T6.7] Allow copy all to clipboard from console. (blocked by T6.1 wiring)
-- [ ] [T6.8] Option to auto-open console on exec start. (no integration)
-- [ ] [T6.9] Limit buffer size to avoid memory pressure. (blocked by T6.1 wiring)
-- [ ] [T6.10] Unit test console with canned output events. (tests absent)
-- [ ] [T6.11] Persist console visibility across sessions. (no storage or wiring)
-- [ ] [T6.12] Show approval decision status in console header. (blocked by T6.1 wiring)
+- [x] [T6.1] Create console pane for ExecCommandBegin events. (Tool window wires ExecConsolePanel)
+- [x] [T6.2] Append ExecCommandOutputDelta chunks to console. (EventBus delivers stream to console)
+- [x] [T6.3] On ExecCommandEnd print exit code and duration. (Console renders exit summary)
+- [x] [T6.4] Honor cwd; show it in console header. (Header reflects command and cwd)
+- [x] [T6.5] Add Kill process action to send cancel (if supported). (Cancel submission sent to CLI)
+- [x] [T6.6] Write ANSI color handling for basic codes. (ANSI parser renders colored output)
+- [x] [T6.7] Allow copy all to clipboard from console. (Copy action active on console pane)
+- [x] [T6.8] Option to auto-open console on exec start. (Auto-open checkbox persists preference)
+- [x] [T6.9] Limit buffer size to avoid memory pressure. (Console trims buffer over 100KB)
+- [x] [T6.10] Unit test console with canned output events. (New tests cover lifecycle and ANSI)
+- [x] [T6.11] Persist console visibility across sessions. (Visibility toggle synced to config)
+- [x] [T6.12] Show approval decision status in console header. (Pending/decision state displayed)
 
 ## T7. MCP tools and prompts
-- [ ] [T7.1] Send ListMcpTools; render tool list. (UI exists; request lacks envelope)
-- [ ] [T7.2] Add run tool action if CLI emits tool call ops. (request still raw JSON)
+- [x] [T7.1] Send ListMcpTools; render tool list. (auto-refresh on load/session with updated envelope names)
+- [x] [T7.2] Add run tool action if CLI emits tool call ops. (double-click runs via submission; handles `mcp_tool_call_*` events)
 - [x] [T7.3] Show tool call begin/end with timing in transcript.
-- [ ] [T7.4] ListCustomPrompts and render prompt library panel. (request lacks envelope)
+- [x] [T7.4] ListCustomPrompts and render prompt library panel. (initial fetch wired to protocol response)
 - [x] [T7.5] Insert prompt into input box on click.
 - [x] [T7.6] Persist last used tool and prompt.
 - [x] [T7.7] Handle missing MCP servers gracefully.
 - [x] [T7.8] Add refresh tools button; debounce calls.
 - [x] [T7.9] Unit tests: synthetic MCP list response.
-- [ ] [T7.10] Telemetry: count tool invocations per session. (only increments on tool list events)
-- [ ] [T7.11] Expose MCP server config link in settings.
+- [x] [T7.10] Telemetry: count tool invocations per session. (counts on `mcp_tool_call_begin`, failures on end)
+- [x] [T7.11] Expose MCP server config link in settings. (new settings entry + tool panel shortcut)
 - [x] [T7.12] Add hover help for tool fields.
 
 ## T8. Settings and configuration
-- [ ] [T8.1] Add Settings page: CLI path, WSL toggle, open on startup. (no settings UI exists)
-- [ ] [T8.2] Add model default and reasoning default settings. (no settings UI exists)
-- [ ] [T8.3] Add approval mode default setting. (no settings UI exists)
-- [ ] [T8.4] Add sandbox policy presets (workspace-write, full). (no settings UI exists)
-- [ ] [T8.5] Validate CLI path and version on save. (no settings UI exists)
-- [ ] [T8.6] Add 'Test connection' button to run whoami. (no settings UI exists)
-- [ ] [T8.7] Persist settings per project and globally. (no settings UI exists)
-- [ ] [T8.8] Export/import settings as JSON. (no settings UI exists)
-- [ ] [T8.9] Unit tests for settings serialization. (no settings code)
-- [ ] [T8.10] Guard against invalid values with messages. (no settings UI exists)
-- [ ] [T8.11] Add reset-to-defaults button. (no settings UI exists)
-- [ ] [T8.12] Ensure no UI freeze during validation. (no settings UI exists)
+- [x] [T8.1] Add Settings page: CLI path, WSL toggle, open on startup. (new configurable with global options)
+- [x] [T8.2] Add model default and reasoning default settings. (global defaults stored in config service)
+- [x] [T8.3] Add approval mode default setting. (header combos seeded from configurable value)
+- [x] [T8.4] Add sandbox policy presets (workspace-write, full). (sandbox selector wired into overrides)
+- [x] [T8.5] Validate CLI path and version on save. (settings enforce executable check before apply)
+- [x] [T8.6] Add 'Test connection' button to run whoami. (async CLI version check button added)
+- [x] [T8.7] Persist settings per project and globally. (project service overrides layered over app defaults)
+- [x] [T8.8] Export/import settings as JSON. (settings dialog supports JSON export/import)
+- [x] [T8.9] Unit tests for settings serialization. (config/project service tests cover state reset)
+- [x] [T8.10] Guard against invalid values with messages. (apply throws ConfigurationException on invalid paths)
+- [x] [T8.11] Add reset-to-defaults button. (settings button clears all fields)
+- [x] [T8.12] Ensure no UI freeze during validation. (test connection runs on pooled thread)
 
 ## T9. Resilience and diagnostics
 - [ ] [T9.1] Add log file rotation and levels (info/warn/error). (logger facade only)

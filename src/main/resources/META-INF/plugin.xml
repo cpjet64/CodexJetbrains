@@ -6,6 +6,10 @@
   <depends>com.intellij.modules.platform</depends>
   <depends optional="true">Git4Idea</depends>
   <extensions defaultExtensionNs="com.intellij">
+    <applicationConfigurable
+      instance="dev.curt.codexjb.ui.settings.CodexSettingsConfigurable"
+      id="dev.curt.codexjb.settings"
+      displayName="Codex"/>
     <toolWindow id="Codex" anchor="right"
       factoryClass="dev.curt.codexjb.ui.CodexToolWindowFactory"/>
     <applicationService

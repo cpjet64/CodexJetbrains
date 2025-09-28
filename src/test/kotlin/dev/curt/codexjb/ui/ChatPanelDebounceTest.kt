@@ -22,6 +22,7 @@ class ChatPanelDebounceTest {
         val sender = ProtoSender(backend, TEST_CONFIG, RecordingLog())
         val panel = createPanel(sender)
         val button = button(panel, "refreshToolsButton")
+        val initial = backend.lines.size
 
         SwingUtilities.invokeAndWait { button.doClick() }
         repeat(4) {
@@ -29,7 +30,11 @@ class ChatPanelDebounceTest {
             SwingUtilities.invokeAndWait { button.doClick() }
         }
 
-        assertEquals(1, backend.lines.size, "Only first refresh should be sent within debounce window")
+        assertEquals(
+            initial + 1,
+            backend.lines.size,
+            "Only first refresh should be sent within debounce window"
+        )
     }
 
     @Test
@@ -39,6 +44,7 @@ class ChatPanelDebounceTest {
         val panel = createPanel(sender)
         val button = button(panel, "refreshToolsButton")
 
+        val initial = backend.lines.size
         SwingUtilities.invokeAndWait { button.doClick() }
         val firstCount = backend.lines.size
 
@@ -46,7 +52,8 @@ class ChatPanelDebounceTest {
         SwingUtilities.invokeAndWait { button.doClick() }
         val secondCount = backend.lines.size
 
-        assertTrue(secondCount > firstCount, "Refresh should fire again after debounce period")
+        assertTrue(secondCount > firstCount)
+        assertEquals(initial + 2, secondCount, "Expected exactly two refresh submissions after debounce window")
     }
 
     private fun createPanel(sender: ProtoSender): ChatPanel {

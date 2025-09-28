@@ -13,20 +13,20 @@ class McpToolsTest {
     fun handlesMcpToolsListEvent() {
         val model = McpToolsModel()
         val msg = JsonObject()
-        msg.addProperty("type", "McpToolsList")
-        
-        val toolsArray = com.google.gson.JsonArray()
-        val tool1 = JsonObject()
-        tool1.addProperty("name", "test_tool")
-        tool1.addProperty("description", "A test tool")
-        toolsArray.add(tool1)
-        
-        val tool2 = JsonObject()
-        tool2.addProperty("name", "another_tool")
-        tool2.addProperty("description", "Another test tool")
-        toolsArray.add(tool2)
-        
-        msg.add("tools", toolsArray)
+        msg.addProperty("type", "McpListToolsResponse")
+
+        val toolsObject = JsonObject().apply {
+            add("server/tool1", JsonObject().apply {
+                addProperty("name", "test_tool")
+                addProperty("description", "A test tool")
+            })
+            add("server/tool2", JsonObject().apply {
+                addProperty("name", "another_tool")
+                addProperty("description", "Another test tool")
+            })
+        }
+
+        msg.add("tools", toolsObject)
         
         model.onEvent("test-id", msg)
         
@@ -73,8 +73,8 @@ class McpToolsTest {
     fun handlesEmptyToolsList() {
         val model = McpToolsModel()
         val msg = JsonObject()
-        msg.addProperty("type", "McpToolsList")
-        msg.add("tools", com.google.gson.JsonArray())
+        msg.addProperty("type", "McpListToolsResponse")
+        msg.add("tools", JsonObject())
         
         model.onEvent("test-id", msg)
         
@@ -87,23 +87,26 @@ class McpToolsTest {
     fun handlesInvalidToolEntries() {
         val model = McpToolsModel()
         val msg = JsonObject()
-        msg.addProperty("type", "McpToolsList")
-        
+        msg.addProperty("type", "McpListToolsResponse")
+
         val toolsArray = com.google.gson.JsonArray()
-        val validTool = JsonObject()
-        validTool.addProperty("name", "valid_tool")
-        validTool.addProperty("description", "Valid tool")
+        val validTool = JsonObject().apply {
+            addProperty("name", "valid_tool")
+            addProperty("description", "Valid tool")
+        }
         toolsArray.add(validTool)
-        
-        val invalidTool = JsonObject()
-        invalidTool.addProperty("description", "No name")
+
+        val invalidTool = JsonObject().apply {
+            addProperty("description", "No name")
+        }
         toolsArray.add(invalidTool)
-        
-        val anotherValidTool = JsonObject()
-        anotherValidTool.addProperty("name", "another_valid")
-        anotherValidTool.addProperty("description", "Another valid")
+
+        val anotherValidTool = JsonObject().apply {
+            addProperty("name", "another_valid")
+            addProperty("description", "Another valid")
+        }
         toolsArray.add(anotherValidTool)
-        
+
         msg.add("tools", toolsArray)
         
         model.onEvent("test-id", msg)

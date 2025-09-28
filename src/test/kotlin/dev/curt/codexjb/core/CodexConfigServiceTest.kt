@@ -26,5 +26,20 @@ class CodexConfigServiceTest {
 
         assertEquals(fake, resolved)
     }
-}
 
+    @Test
+    fun resetClearsCustomSettings() {
+        val svc = CodexConfigService()
+        svc.useWsl = true
+        svc.openToolWindowOnStartup = true
+        svc.defaultModel = "gpt-4o-mini"
+        svc.defaultSandboxPolicy = "danger-full-access"
+
+        svc.resetToDefaults()
+
+        assertEquals(false, svc.useWsl)
+        assertEquals(false, svc.openToolWindowOnStartup)
+        assertEquals(null, svc.defaultModel)
+        assertEquals(null, svc.defaultSandboxPolicy)
+    }
+}

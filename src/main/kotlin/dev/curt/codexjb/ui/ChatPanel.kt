@@ -1,18 +1,23 @@
 package dev.curt.codexjb.ui
 
+import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import dev.curt.codexjb.core.CodexConfigService
 import dev.curt.codexjb.core.CodexLogger
 import dev.curt.codexjb.core.LogSink
+import dev.curt.codexjb.core.TelemetryService
 import dev.curt.codexjb.proto.*
 import dev.curt.codexjb.tooling.PatchApplier
+import dev.curt.codexjb.ui.settings.CodexSettingsConfigurable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.options.ShowSettingsUtil
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
 import java.awt.event.ActionEvent
+import java.awt.FlowLayout
 import java.nio.file.Path
 import javax.swing.*
 import javax.swing.border.EmptyBorder
@@ -26,7 +31,8 @@ class ChatPanel(
     private val effortProvider: () -> String,
     private val cwdProvider: () -> Path?,
     private val mcpTools: McpToolsModel = McpToolsModel(),
-    private val prompts: PromptsModel = PromptsModel()
+    private val prompts: PromptsModel = PromptsModel(),
+    private val sandboxProvider: () -> String = { "workspace-write" }
 ) : JPanel(BorderLayout()) {
 
     private val log: LogSink = CodexLogger.forClass(ChatPanel::class.java)
@@ -39,6 +45,7 @@ class ChatPanel(
     private val toolsPanel = JPanel()
     private val toolsList = JList<String>()
     private val refreshToolsButton = JButton("Refresh")
+    private val openMcpSettingsButton = JButton("MCP Settings…")
     private val promptsPanel = JPanel()
     private val promptsList = JList<String>()
     private val refreshPromptsButton = JButton("Refresh")
@@ -47,6 +54,9 @@ class ChatPanel(
     private var currentAgentArea: JTextArea? = null
     private var lastRefreshTime = 0L
     private val refreshDebounceMs = 1000L // 1 second debounce
+    private var initialRequestsSent = false
+    private var lastToolsSessionId: String? = null
+    private var lastPromptsSessionId: String? = null
 
     init {
         transcript.layout = BoxLayout(transcript, BoxLayout.Y_AXIS)
@@ -56,6 +66,7 @@ class ChatPanel(
         setupToolsPanel()
         add(buildFooter(), BorderLayout.SOUTH)
         registerListeners()
+        requestInitialData()
     }
 
     private fun setupToolsPanel() {
@@ -66,7 +77,12 @@ class ChatPanel(
         val toolsLabel = JLabel("Available Tools:")
         toolsHeader.add(toolsLabel, BorderLayout.WEST)
         refreshToolsButton.toolTipText = "Refresh the list of available MCP tools"
-        toolsHeader.add(refreshToolsButton, BorderLayout.EAST)
+        openMcpSettingsButton.toolTipText = "Open Codex settings to configure MCP servers"
+        val toolsActions = JPanel(FlowLayout(FlowLayout.RIGHT, 6, 0)).apply {
+            add(openMcpSettingsButton)
+            add(refreshToolsButton)
+        }
+        toolsHeader.add(toolsActions, BorderLayout.EAST)
         toolsPanel.add(toolsHeader, BorderLayout.NORTH)
         
         toolsList.selectionMode = ListSelectionModel.SINGLE_SELECTION
@@ -108,7 +124,7 @@ class ChatPanel(
             override fun mouseClicked(e: java.awt.event.MouseEvent) {
                 if (e.clickCount == 2) {
                     val selectedTool = toolsList.selectedValue
-                    if (selectedTool != null && !selectedTool.startsWith("âš ï¸")) {
+                    if (selectedTool != null && mcpTools.tools.any { it.name == selectedTool }) {
                         runTool(selectedTool)
                     }
                 }
@@ -123,6 +139,22 @@ class ChatPanel(
             if (currentTime - lastRefreshTime > refreshDebounceMs) {
                 lastRefreshTime = currentTime
                 refreshTools()
+            }
+        }
+
+        openMcpSettingsButton.addActionListener {
+            val targetProject = project
+            if (targetProject != null) {
+                CodexSettingsConfigurable.withProject(targetProject) {
+                    ShowSettingsUtil.getInstance().showSettingsDialog(targetProject, SETTINGS_ID)
+                }
+            } else {
+                JOptionPane.showMessageDialog(
+                    this,
+                    "MCP server settings are available when a project is open.",
+                    "Codex Settings",
+                    JOptionPane.INFORMATION_MESSAGE
+                )
             }
         }
         
@@ -243,84 +275,110 @@ class ChatPanel(
     }
 
     private fun registerListeners() {
-        bus.addListener("TurnDiff") { id, msg ->
-            val diff = msg.get("diff")?.asString ?: msg.get("text")?.asString ?: return@addListener
+        registerBusListener("TurnDiff") { id, msg ->
+            val diff = msg.get("diff")?.asString ?: msg.get("text")?.asString ?: return@registerBusListener
             SwingUtilities.invokeLater { showDiffPanel(id, diff) }
         }
-        bus.addListener("AgentMessageDelta") { id, msg ->
-            if (id != activeTurnId) return@addListener
-            val delta = msg.get("delta")?.asString ?: return@addListener
+        registerBusListener("AgentMessageDelta") { id, msg ->
+            if (id != activeTurnId) return@registerBusListener
+            val delta = msg.get("delta")?.asString ?: return@registerBusListener
             SwingUtilities.invokeLater { appendAgentDelta(delta) }
         }
-        bus.addListener("AgentMessage") { id, _ ->
-            if (id != activeTurnId) return@addListener
+        registerBusListener("AgentMessage") { id, _ ->
+            if (id != activeTurnId) return@registerBusListener
             SwingUtilities.invokeLater { sealAgentMessage() }
         }
-        bus.addListener("McpToolsList") { id, msg ->
-            mcpTools.onEvent(id, msg)
+
+        registerBusListener(
+            "McpListToolsResponse",
+            "mcp_list_tools_response",
+            "McpToolsList",
+            "McpToolsError",
+            "mcp_tools_error",
+            "McpServerUnavailable",
+            "mcp_server_unavailable"
+        ) { eventId, msg ->
+            mcpTools.onEvent(eventId, msg)
             SwingUtilities.invokeLater { updateToolsList() }
         }
-        bus.addListener("PromptsList") { id, msg ->
-            prompts.onEvent(id, msg)
+
+        registerBusListener(
+            "ListCustomPromptsResponse",
+            "list_custom_prompts_response",
+            "PromptsList"
+        ) { eventId, msg ->
+            prompts.onEvent(eventId, msg)
             SwingUtilities.invokeLater { updatePromptsList() }
         }
-        bus.addListener("McpToolsError") { id, msg ->
-            mcpTools.onEvent(id, msg)
-            SwingUtilities.invokeLater { updateToolsList() }
+
+        registerBusListener("McpToolCallBegin", "mcp_tool_call_begin", "ToolCallBegin") { _, msg ->
+            handleMcpToolCallBegin(msg)
         }
-        bus.addListener("McpServerUnavailable") { id, msg ->
-            mcpTools.onEvent(id, msg)
-            SwingUtilities.invokeLater { updateToolsList() }
+        registerBusListener("McpToolCallEnd", "mcp_tool_call_end", "ToolCallEnd") { _, msg ->
+            handleMcpToolCallEnd(msg)
         }
-        bus.addListener("ToolCallBegin") { id, msg ->
-            val toolName = msg.get("tool")?.asString ?: "Unknown"
-            val timestamp = System.currentTimeMillis()
-            SwingUtilities.invokeLater { 
-                addToolCallMessage("ðŸ”§ Starting tool: $toolName", timestamp)
-            }
+
+        registerBusListener("SessionConfigured", "session_configured") { id, _ ->
+            onSessionConfigured(id)
         }
-        bus.addListener("ToolCallEnd") { id, msg ->
-            val toolName = msg.get("tool")?.asString ?: "Unknown"
-            val duration = msg.get("duration_ms")?.asLong ?: 0L
-            val success = msg.get("success")?.asBoolean ?: false
-            val status = if (success) "âœ…" else "âŒ"
-            SwingUtilities.invokeLater { 
-                addToolCallMessage("$status Tool '$toolName' completed in ${duration}ms", System.currentTimeMillis())
-            }
+    }
+
+    private fun registerBusListener(vararg types: String, handler: (String, JsonObject) -> Unit) {
+        types.forEach { type ->
+            bus.addListener(type) { id, msg -> handler(id, msg) }
         }
     }
 
     private fun updateToolsList() {
-        if (mcpTools.hasError()) {
-            // Show error message in the tools list
-            val errorMsg = mcpTools.getErrorMessage() ?: "MCP server unavailable"
-            toolsList.model = DefaultListModel<String>().apply {
-                addElement("âš ï¸ Error: $errorMsg")
-                addElement("")
-                addElement("Click 'Refresh' to retry")
+        toolsList.clearSelection()
+        when {
+            mcpTools.hasError() -> {
+                val errorMsg = mcpTools.getErrorMessage() ?: "MCP server unavailable"
+                toolsList.model = DefaultListModel<String>().apply {
+                    addElement("⚠ Error: $errorMsg")
+                    addElement("")
+                    addElement("Click 'Refresh' to retry")
+                }
+                toolsList.isEnabled = false
             }
-        } else {
-            val toolNames = mcpTools.tools.map { it.name }
-            toolsList.model = DefaultListModel<String>().apply {
-                toolNames.forEach { addElement(it) }
+            mcpTools.tools.isEmpty() -> {
+                toolsList.model = DefaultListModel<String>().apply {
+                    addElement("(No tools available)")
+                }
+                toolsList.isEnabled = false
             }
-            
-            // Restore last used tool selection
-            val config = ApplicationManager.getApplication().getService(CodexConfigService::class.java)
-            val lastUsedTool = config.lastUsedTool
-            if (lastUsedTool != null && toolNames.contains(lastUsedTool)) {
-                toolsList.setSelectedValue(lastUsedTool, true)
+            else -> {
+                val toolNames = mcpTools.tools.map { it.name }
+                toolsList.model = DefaultListModel<String>().apply {
+                    toolNames.forEach { addElement(it) }
+                }
+                toolsList.isEnabled = true
+
+                val config = ApplicationManager.getApplication().getService(CodexConfigService::class.java)
+                val lastUsedTool = config.lastUsedTool
+                if (lastUsedTool != null && toolNames.contains(lastUsedTool)) {
+                    toolsList.setSelectedValue(lastUsedTool, true)
+                }
             }
         }
     }
 
     private fun updatePromptsList() {
+        promptsList.clearSelection()
+        if (prompts.prompts.isEmpty()) {
+            promptsList.model = DefaultListModel<String>().apply {
+                addElement("(No prompts available)")
+            }
+            promptsList.isEnabled = false
+            return
+        }
+
         val promptNames = prompts.prompts.map { it.name }
         promptsList.model = DefaultListModel<String>().apply {
             promptNames.forEach { addElement(it) }
         }
-        
-        // Restore last used prompt selection
+        promptsList.isEnabled = true
+
         val config = ApplicationManager.getApplication().getService(CodexConfigService::class.java)
         val lastUsedPrompt = config.lastUsedPrompt
         if (lastUsedPrompt != null && promptNames.contains(lastUsedPrompt)) {
@@ -338,16 +396,28 @@ class ChatPanel(
     }
 
     private fun refreshTools() {
+        SwingUtilities.invokeLater {
+            toolsList.model = DefaultListModel<String>().apply { addElement("Loading tools…") }
+            toolsList.isEnabled = false
+        }
         sendSubmission("ListMcpTools")
         log.info("Refreshing MCP tools...")
     }
 
     private fun refreshPrompts() {
+        SwingUtilities.invokeLater {
+            promptsList.model = DefaultListModel<String>().apply { addElement("Loading prompts…") }
+            promptsList.isEnabled = false
+        }
         sendSubmission("ListCustomPrompts")
         log.info("Refreshing prompts...")
     }
 
     private fun runTool(toolName: String) {
+        if (mcpTools.tools.none { it.name == toolName }) {
+            log.warn("Attempted to run unknown MCP tool: $toolName")
+            return
+        }
         sendSubmission("RunTool") {
             addProperty("tool", toolName)
         }
@@ -355,6 +425,85 @@ class ChatPanel(
 
         addUserMessage("Running tool: $toolName")
     }
+
+    private fun requestInitialData() {
+        if (initialRequestsSent) return
+        initialRequestsSent = true
+        refreshTools()
+        refreshPrompts()
+    }
+
+    private fun onSessionConfigured(sessionId: String) {
+        if (sessionId.isBlank()) return
+        if (lastToolsSessionId != sessionId) {
+            lastToolsSessionId = sessionId
+            refreshTools()
+        }
+        if (lastPromptsSessionId != sessionId) {
+            lastPromptsSessionId = sessionId
+            refreshPrompts()
+        }
+    }
+
+    private fun handleMcpToolCallBegin(msg: JsonObject) {
+        val invocation = msg.getAsJsonObject("invocation")
+        val tool = invocation?.get("tool")?.asString
+            ?: invocation?.get("name")?.asString
+            ?: msg.get("tool")?.asString
+            ?: "Unknown"
+        val server = invocation?.get("server")?.asString ?: msg.get("server")?.asString
+        val label = formatToolLabel(tool, server)
+        TelemetryService.recordMcpToolInvocation()
+        SwingUtilities.invokeLater {
+            addToolCallMessage("🔧 Starting tool: $label", System.currentTimeMillis())
+        }
+    }
+
+    private fun handleMcpToolCallEnd(msg: JsonObject) {
+        val invocation = msg.getAsJsonObject("invocation")
+        val tool = invocation?.get("tool")?.asString
+            ?: invocation?.get("name")?.asString
+            ?: msg.get("tool")?.asString
+            ?: "Unknown"
+        val server = invocation?.get("server")?.asString ?: msg.get("server")?.asString
+        val label = formatToolLabel(tool, server)
+        val durationMs = parseDurationMillis(msg.getAsJsonObject("duration"))
+            ?: msg.get("duration_ms")?.let { runCatching { it.asLong }.getOrNull() }
+        val success = when {
+            msg.get("success") != null -> msg.get("success")?.asBoolean ?: false
+            else -> parseToolCallSuccess(msg.get("result"))
+        }
+        if (!success) {
+            TelemetryService.recordMcpToolFailure()
+        }
+        val durationText = durationMs?.let { "$it ms" } ?: "unknown time"
+        val status = if (success) "✅" else "❌"
+        SwingUtilities.invokeLater {
+            addToolCallMessage("$status Tool '$label' completed in $durationText", System.currentTimeMillis())
+        }
+    }
+
+    private fun parseDurationMillis(durationObj: JsonObject?): Long? {
+        if (durationObj == null) return null
+        val secs = durationObj.longOrNull("secs") ?: return null
+        val nanos = durationObj.longOrNull("nanos") ?: 0L
+        return secs * 1000 + nanos / 1_000_000
+    }
+
+    private fun parseToolCallSuccess(resultEl: JsonElement?): Boolean {
+        val obj = resultEl?.takeIf { it.isJsonObject }?.asJsonObject ?: return true
+        if (obj.has("Err") || obj.has("error")) return false
+        if (!obj.has("Ok")) return true
+        val ok = obj.get("Ok")
+        if (!ok.isJsonObject) return true
+        val isError = ok.asJsonObject.get("is_error")?.asBoolean ?: false
+        return !isError
+    }
+
+    private fun JsonObject.longOrNull(name: String): Long? = runCatching { this.get(name)?.asLong }.getOrNull()
+
+    private fun formatToolLabel(tool: String, server: String?): String =
+        if (server.isNullOrBlank()) tool else "$server:$tool"
 
     private fun addToolCallMessage(text: String, timestamp: Long) {
         val timeStr = java.text.SimpleDateFormat("HH:mm:ss").format(java.util.Date(timestamp))
@@ -390,17 +539,19 @@ class ChatPanel(
         setSending(true)
         turns.put(Turn(id))
         activeTurnId = id
-        sender.send(buildSubmission(id, text, model, effort))
+        val sandbox = sandboxProvider()
+        sender.send(buildSubmission(id, text, model, effort, sandbox))
     }
 
-    private fun buildSubmission(id: String, text: String, model: String, effort: String): String {
+    private fun buildSubmission(id: String, text: String, model: String, effort: String, sandbox: String): String {
         val body = JsonObject().apply {
             addProperty("type", "UserMessage")
             addProperty("text", text)
             val ctx = OverrideTurnContext(
                 cwd = cwdProvider()?.toString(),
                 model = model,
-                effort = effort
+                effort = effort,
+                sandboxPolicy = sandbox
             )
             add("override", ctx.toJson())
         }
@@ -537,5 +688,9 @@ class ChatPanel(
         }
         menu.add(copy)
         transcript.componentPopupMenu = menu
+    }
+
+    companion object {
+        private const val SETTINGS_ID = "dev.curt.codexjb.settings"
     }
 }

@@ -30,10 +30,12 @@ class ChatPanelTest {
             effortProvider = { "medium" },
             cwdProvider = { Paths.get("/work") }
         )
+        assertTrue(sent.any { it.contains("ListMcpTools", ignoreCase = true) })
+        assertTrue(sent.any { it.contains("ListCustomPrompts", ignoreCase = true) })
         val before = panel.transcriptCount()
         SwingUtilities.invokeAndWait { panel.submit("Hello") }
         assertTrue(panel.transcriptCount() > before)
-        assertTrue(sent.first().contains("\"UserMessage\""))
+        assertTrue(sent.any { it.contains("\"UserMessage\"", ignoreCase = true) })
         assertEquals(1, turns.size())
         assertEquals(false, panel.isSendEnabled())
         assertEquals(true, panel.isSpinnerVisible())

@@ -1,18 +1,26 @@
 package dev.curt.codexjb.ui
 
+import com.google.gson.JsonObject
+import com.intellij.openapi.Disposable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
-import com.intellij.openapi.Disposable
 import com.intellij.ui.content.ContentFactory
 import dev.curt.codexjb.core.*
 import dev.curt.codexjb.proto.*
 import java.awt.BorderLayout
+import java.awt.Component
 import java.nio.file.Path
+import javax.swing.DefaultComboBoxModel
+import javax.swing.DefaultListCellRenderer
+import javax.swing.JCheckBox
 import javax.swing.JComboBox
 import javax.swing.JLabel
 import javax.swing.JPanel
+import javax.swing.JToggleButton
+import javax.swing.SwingUtilities
+import javax.swing.border.EmptyBorder
 
 class CodexToolWindowFactory : ToolWindowFactory {
   override fun createToolWindowContent(project: Project, toolWindow: ToolWindow) {
@@ -24,29 +32,80 @@ class CodexToolWindowFactory : ToolWindowFactory {
     val sessionState = SessionState(log)
     bus.addListener("SessionConfigured") { id, msg -> sessionState.onEvent(id, msg) }
 
-    val exe = cfg.resolveExecutable(project.basePath?.let { Path.of(it) })
+    val effectiveSettings = cfg.effectiveSettings(project)
+    val exe = effectiveSettings.cliPath ?: cfg.resolveExecutable(project.basePath?.let { Path.of(it) })
     if (exe == null) {
       val content = ContentFactory.getInstance()
         .createContent(JLabel("Codex CLI not found in PATH"), "Chat", false)
       toolWindow.contentManager.addContent(content)
       return
     }
-    val config = CodexProcessConfig(executable = exe)
-    proc.start(config)
+    val baseConfig = CodexProcessConfig(executable = exe)
+    val useWsl = effectiveSettings.useWsl && EnvironmentInfo.os == OperatingSystem.WINDOWS
+    val processConfig = if (useWsl) {
+      CodexProcessConfig(
+        executable = Path.of("wsl"),
+        arguments = listOf("codex") + baseConfig.arguments,
+        workingDirectory = baseConfig.workingDirectory,
+        environment = baseConfig.environment,
+        inheritParentEnvironment = baseConfig.inheritParentEnvironment
+      )
+    } else baseConfig
+    proc.start(processConfig)
     attachReader(proc, bus, log)
 
-    val models = arrayOf("gpt-4.1-mini", "gpt-4o-mini")
-    val efforts = arrayOf("low", "medium", "high")
+    val models = CodexDefaults.MODELS.toTypedArray()
+    val efforts = CodexDefaults.EFFORTS.toTypedArray()
+    val sandboxOptions = CodexDefaults.SANDBOX_POLICIES.toTypedArray()
     val modelCombo = JComboBox(models)
     val effortCombo = JComboBox(efforts)
     val approvalModes = ApprovalMode.values()
     val approvalCombo = JComboBox(approvalModes)
-    cfg.lastModel?.let { m -> models.indexOf(m).takeIf { it >= 0 }?.let(modelCombo::setSelectedIndex) }
-    cfg.lastEffort?.let { r -> efforts.indexOf(r).takeIf { it >= 0 }?.let(effortCombo::setSelectedIndex) }
-    cfg.lastApprovalMode?.let { name ->
-      approvalModes.indexOfFirst { it.name == name }.takeIf { it >= 0 }
-        ?.let(approvalCombo::setSelectedIndex)
+    val sandboxCombo = JComboBox(DefaultComboBoxModel(sandboxOptions))
+
+    fun selectModel(initial: String?) {
+      initial?.let { models.indexOf(it).takeIf { idx -> idx >= 0 }?.let(modelCombo::setSelectedIndex) }
     }
+    fun selectEffort(initial: String?) {
+      initial?.let { efforts.indexOf(it).takeIf { idx -> idx >= 0 }?.let(effortCombo::setSelectedIndex) }
+    }
+    fun selectApproval(initial: String?) {
+      initial?.let {
+        approvalModes.indexOfFirst { mode -> mode.name == it }
+          .takeIf { idx -> idx >= 0 }
+          ?.let(approvalCombo::setSelectedIndex)
+      }
+    }
+
+    selectModel(cfg.lastModel ?: effectiveSettings.defaultModel)
+    selectEffort(cfg.lastEffort ?: effectiveSettings.defaultEffort)
+    selectApproval(cfg.lastApprovalMode ?: effectiveSettings.defaultApprovalMode)
+
+    if (modelCombo.selectedIndex < 0) modelCombo.selectedIndex = 0
+    if (effortCombo.selectedIndex < 0) effortCombo.selectedIndex = 0
+    if (approvalCombo.selectedIndex < 0) approvalCombo.selectedItem = ApprovalMode.CHAT
+
+    sandboxCombo.renderer = object : DefaultListCellRenderer() {
+      override fun getListCellRendererComponent(
+        list: javax.swing.JList<*>,
+        value: Any?,
+        index: Int,
+        isSelected: Boolean,
+        cellHasFocus: Boolean
+      ): Component {
+        val renderer = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
+        if (value is CodexDefaults.SandboxOption) {
+          text = value.label
+        }
+        return renderer
+      }
+    }
+    val initialSandboxId = cfg.lastSandboxPolicy
+      ?: effectiveSettings.defaultSandboxPolicy
+      ?: sandboxOptions.first().id
+    val initialSandbox = sandboxOptions.firstOrNull { it.id == initialSandboxId } ?: sandboxOptions.first()
+    sandboxCombo.selectedItem = initialSandbox
+    cfg.lastSandboxPolicy = initialSandbox.id
     val pushStatusBar = {
       CodexStatusBarController.update(
         modelCombo.selectedItem as String,
@@ -61,13 +120,21 @@ class CodexToolWindowFactory : ToolWindowFactory {
       add(effortCombo)
       add(JLabel("Approvals:"))
       add(approvalCombo)
+      add(JLabel("Sandbox:"))
+      add(sandboxCombo)
     }
-    val warn = JLabel("Full Access mode")
-    warn.foreground = java.awt.Color(0xB0, 0, 0)
-    warn.isVisible = (approvalCombo.selectedItem as ApprovalMode) == ApprovalMode.FULL_ACCESS
-    header.add(warn)
+    val approvalWarn = JLabel("Full Access mode")
+    approvalWarn.foreground = java.awt.Color(0xB0, 0, 0)
+    approvalWarn.isVisible = (approvalCombo.selectedItem as ApprovalMode) == ApprovalMode.FULL_ACCESS
+    header.add(approvalWarn)
+    val sandboxWarn = JLabel("Sandbox: Full Access")
+    sandboxWarn.foreground = java.awt.Color(0xB0, 0, 0)
+    sandboxWarn.isVisible = initialSandbox.id == "danger-full-access"
+    header.add(sandboxWarn)
     modelCombo.accessibleContext.accessibleName = "Model selector"
     effortCombo.accessibleContext.accessibleName = "Effort selector"
+    approvalCombo.accessibleContext.accessibleName = "Approval mode selector"
+    sandboxCombo.accessibleContext.accessibleName = "Sandbox policy selector"
     modelCombo.addActionListener {
       val model = modelCombo.selectedItem as String
       cfg.lastModel = model
@@ -80,13 +147,17 @@ class CodexToolWindowFactory : ToolWindowFactory {
     }
     approvalCombo.addActionListener {
       cfg.lastApprovalMode = (approvalCombo.selectedItem as ApprovalMode).name
-      warn.isVisible = (approvalCombo.selectedItem as ApprovalMode) == ApprovalMode.FULL_ACCESS
+      approvalWarn.isVisible = (approvalCombo.selectedItem as ApprovalMode) == ApprovalMode.FULL_ACCESS
     }
-    approvalCombo.accessibleContext.accessibleName = "Approval mode selector"
+    sandboxCombo.addActionListener {
+      val option = sandboxCombo.selectedItem as CodexDefaults.SandboxOption
+      cfg.lastSandboxPolicy = option.id
+      sandboxWarn.isVisible = option.id == "danger-full-access"
+    }
     val infoBanner = InfoBanner()
     val sender = ProtoSender(
       backend = ServiceBackend(proc),
-      config = config,
+      config = processConfig,
       log = log,
       onReconnect = { infoBanner.show("Reconnected to Codex CLI") }
     )
@@ -111,9 +182,19 @@ class CodexToolWindowFactory : ToolWindowFactory {
       project = project,
       modelProvider = { modelCombo.selectedItem as String },
       effortProvider = { effortCombo.selectedItem as String },
-      cwdProvider = { project.basePath?.let { Path.of(it) } }
+      cwdProvider = { project.basePath?.let { Path.of(it) } },
+      sandboxProvider = { (sandboxCombo.selectedItem as CodexDefaults.SandboxOption).id }
     )
     panel.add(chat, BorderLayout.CENTER)
+
+    val consolePanel = ExecConsolePanel().apply { wire(bus) }
+    val consoleWrapper = JPanel(BorderLayout()).apply {
+      border = EmptyBorder(8, 8, 8, 8)
+      add(consolePanel, BorderLayout.CENTER)
+      isVisible = cfg.consoleVisible
+      preferredSize = java.awt.Dimension(0, 180)
+    }
+    panel.add(consoleWrapper, BorderLayout.SOUTH)
 
     val content = ContentFactory.getInstance().createContent(panel, "Chat", false)
     content.setDisposer(object : Disposable {
@@ -124,11 +205,22 @@ class CodexToolWindowFactory : ToolWindowFactory {
     })
     toolWindow.contentManager.addContent(content)
 
+    if (effectiveSettings.openToolWindowOnStartup) {
+      SwingUtilities.invokeLater { toolWindow.show(null) }
+    }
+
     val store = ApprovalStore()
     val approvals = ApprovalsController(
       modeProvider = { approvalCombo.selectedItem as ApprovalMode },
       store = store,
-      onDecision = { sender.send(it.toString()) },
+      onDecision = {
+        val body = it.getAsJsonObject("body")
+        if (body.get("type")?.asString == "ExecApprovalDecision") {
+          val status = if (body.get("allow")?.asBoolean == true) "APPROVED" else "DENIED"
+          SwingUtilities.invokeLater { consolePanel.setApprovalStatus(status) }
+        }
+        sender.send(it.toString())
+      },
       log = log,
       prompt = { title, message ->
         javax.swing.JOptionPane.showConfirmDialog(
@@ -178,6 +270,57 @@ class CodexToolWindowFactory : ToolWindowFactory {
       val total = msg.get("total")?.asInt ?: (input + output)
       usageLabel.text = "Tokens: in=$input out=$output total=$total"
     }
+
+    consolePanel.setCancelHandler { execId ->
+      sender.send(buildCancelExecSubmission(execId))
+      infoBanner.show("Cancel request sent for exec command")
+    }
+
+    val consoleToggle = JToggleButton("Console").apply {
+      isSelected = cfg.consoleVisible
+      addActionListener {
+        val visible = isSelected
+        consoleWrapper.isVisible = visible
+        cfg.consoleVisible = visible
+        panel.revalidate()
+        panel.repaint()
+      }
+      accessibleContext.accessibleName = "Toggle exec console visibility"
+    }
+    header.add(consoleToggle)
+
+    val autoOpenConsoleCheck = JCheckBox("Auto-open exec console").apply {
+      isSelected = cfg.autoOpenConsoleOnExec
+      addActionListener { cfg.autoOpenConsoleOnExec = isSelected }
+      accessibleContext.accessibleName = "Auto-open exec console"
+    }
+    header.add(autoOpenConsoleCheck)
+
+    val ensureConsoleVisible = {
+      if (!consoleWrapper.isVisible) {
+        consoleWrapper.isVisible = true
+        cfg.consoleVisible = true
+      }
+      if (!consoleToggle.isSelected) consoleToggle.isSelected = true
+      panel.revalidate()
+      panel.repaint()
+    }
+
+    bus.addListener("ExecCommandBegin") { _, _ ->
+      SwingUtilities.invokeLater {
+        if (cfg.autoOpenConsoleOnExec) ensureConsoleVisible()
+      }
+    }
+
+    bus.addListener("ExecApprovalRequest") { id, msg ->
+      val cwd = msg.get("cwd")?.asString ?: ""
+      val command = msg.get("command")?.asString ?: ""
+      SwingUtilities.invokeLater {
+        if (cfg.autoOpenConsoleOnExec) ensureConsoleVisible()
+        consolePanel.showPending(id, cwd, command)
+        consolePanel.setApprovalStatus("PENDING")
+      }
+    }
   }
 
   private fun attachReader(service: CodexProcessService, bus: EventBus, log: LogSink) {
@@ -194,5 +337,13 @@ class CodexToolWindowFactory : ToolWindowFactory {
         log.warn("stdout reader ended: ${t.message}")
       }
     }.apply { isDaemon = true; name = "codex-proto-stdout" }.start()
+  }
+
+  private fun buildCancelExecSubmission(execId: String): String {
+    val body = JsonObject().apply {
+      addProperty("type", "CancelExecCommand")
+      addProperty("exec_id", execId)
+    }
+    return EnvelopeJson.encodeSubmission(SubmissionEnvelope(Ids.newId(), "Submit", body))
   }
 }
