@@ -31,5 +31,10 @@
       text="Codex: Diagnostics" description="Show Codex diagnostics">
       <add-to-group group-id="ToolsMenu" anchor="last"/>
     </action>
+    <action id="dev.curt.codexjb.actions.CodexReportIssue"
+      class="dev.curt.codexjb.actions.CodexReportIssueAction"
+      text="Codex: Report Issue" description="Copy diagnostics snapshot for issue reports">
+      <add-to-group group-id="ToolsMenu" anchor="last"/>
+    </action>
   </actions>
 </idea-plugin>

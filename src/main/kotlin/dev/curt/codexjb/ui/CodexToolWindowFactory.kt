@@ -8,6 +8,10 @@ import com.intellij.openapi.wm.ToolWindow
 import com.intellij.openapi.wm.ToolWindowFactory
 import com.intellij.ui.content.ContentFactory
 import dev.curt.codexjb.core.*
+import dev.curt.codexjb.core.DiagnosticsService
+import dev.curt.codexjb.core.ProcessHealth
+import dev.curt.codexjb.core.ProcessHealthMonitor
+import dev.curt.codexjb.core.TurnMetricsService
 import dev.curt.codexjb.proto.*
 import java.awt.BorderLayout
 import java.awt.Component
@@ -107,7 +111,7 @@ class CodexToolWindowFactory : ToolWindowFactory {
     sandboxCombo.selectedItem = initialSandbox
     cfg.lastSandboxPolicy = initialSandbox.id
     val pushStatusBar = {
-      CodexStatusBarController.update(
+      CodexStatusBarController.updateSession(
         modelCombo.selectedItem as String,
         effortCombo.selectedItem as String
       )
@@ -155,6 +159,9 @@ class CodexToolWindowFactory : ToolWindowFactory {
       sandboxWarn.isVisible = option.id == "danger-full-access"
     }
     val infoBanner = InfoBanner()
+    val processMonitor = ProcessHealthMonitor(proc, processConfig)
+    processMonitor.start()
+
     val sender = ProtoSender(
       backend = ServiceBackend(proc),
       config = processConfig,
@@ -196,14 +203,21 @@ class CodexToolWindowFactory : ToolWindowFactory {
     }
     panel.add(consoleWrapper, BorderLayout.SOUTH)
 
-    val content = ContentFactory.getInstance().createContent(panel, "Chat", false)
+    val contentFactory = ContentFactory.getInstance()
+    val content = contentFactory.createContent(panel, "Chat", false)
     content.setDisposer(object : Disposable {
       override fun dispose() {
         sender.setOnSendListener(null)
         heartbeat.dispose()
+        processMonitor.close()
       }
     })
     toolWindow.contentManager.addContent(content)
+
+    val diagnosticsPanel = DiagnosticsPanel()
+    val diagnosticsContent = contentFactory.createContent(diagnosticsPanel, "Diagnostics", false)
+    diagnosticsContent.setDisposer(Disposable { diagnosticsPanel.dispose() })
+    toolWindow.contentManager.addContent(diagnosticsContent)
 
     if (effectiveSettings.openToolWindowOnStartup) {
       SwingUtilities.invokeLater { toolWindow.show(null) }
@@ -264,11 +278,12 @@ class CodexToolWindowFactory : ToolWindowFactory {
       sessionLabel.text = if (parts.isNotEmpty()) "Session: ${parts.joinToString(" • ")}" else ""
     }
 
-    bus.addListener("TokenCount") { _, msg ->
+    bus.addListener("TokenCount") { id, msg ->
       val input = msg.get("input")?.asInt ?: 0
       val output = msg.get("output")?.asInt ?: 0
       val total = msg.get("total")?.asInt ?: (input + output)
       usageLabel.text = "Tokens: in=$input out=$output total=$total"
+      TurnMetricsService.onTokenCount(id, total)
     }
 
     consolePanel.setCancelHandler { execId ->
@@ -325,18 +340,32 @@ class CodexToolWindowFactory : ToolWindowFactory {
 
   private fun attachReader(service: CodexProcessService, bus: EventBus, log: LogSink) {
     val streams = service.streams() ?: return
-    val input = streams.first
-    val reader = input.bufferedReader(Charsets.UTF_8)
+    val stdout = streams.first.bufferedReader(Charsets.UTF_8)
+    val stderr = streams.second.bufferedReader(Charsets.UTF_8)
+
     Thread {
       try {
         while (true) {
-          val line = reader.readLine() ?: break
+          val line = stdout.readLine() ?: break
+          ProcessHealth.onStdout()
+          CodexStatusBarController.updateHealth(ProcessHealth.Status.OK)
           bus.dispatch(line)
         }
       } catch (t: Throwable) {
         log.warn("stdout reader ended: ${t.message}")
       }
     }.apply { isDaemon = true; name = "codex-proto-stdout" }.start()
+
+    Thread {
+      try {
+        while (true) {
+          val line = stderr.readLine() ?: break
+          DiagnosticsService.append(line)
+        }
+      } catch (t: Throwable) {
+        log.warn("stderr reader ended: ${t.message}")
+      }
+    }.apply { isDaemon = true; name = "codex-proto-stderr" }.start()
   }
 
   private fun buildCancelExecSubmission(execId: String): String {

@@ -7,7 +7,8 @@ class CodexStatusBarWidgetTest {
 
     @Test
     fun statusTextBuilderUsesBulletSeparator() {
-        assertEquals("Codex: model \u2022 effort", StatusTextBuilder.build("model", "effort"))
+        val state = CodexStatusBarController.State(model = "model", effort = "effort")
+        assertEquals("Codex: model \u2022 effort \u2022 Healthy", StatusTextBuilder.build(state))
     }
 
     @Test
@@ -15,12 +16,12 @@ class CodexStatusBarWidgetTest {
         val widget = CodexStatusBarWidget()
         CodexStatusBarController.register(widget)
         try {
-            assertEquals("Codex: auto \u2022 medium", widget.getText())
-            CodexStatusBarController.update("gpt-4o-mini", "high")
-            assertEquals("Codex: gpt-4o-mini \u2022 high", widget.getText())
+            assertEquals("Codex: auto \u2022 medium \u2022 Healthy", widget.getText())
+            CodexStatusBarController.updateSession("gpt-4o-mini", "high")
+            assertEquals("Codex: gpt-4o-mini \u2022 high \u2022 Healthy", widget.getText())
         } finally {
             CodexStatusBarController.unregister(widget)
-            CodexStatusBarController.update("auto", "medium")
+            CodexStatusBarController.updateSession("auto", "medium")
         }
     }
 }

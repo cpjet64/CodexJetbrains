@@ -5,6 +5,7 @@ import com.intellij.openapi.wm.StatusBar
 import com.intellij.openapi.wm.StatusBarWidget
 import com.intellij.openapi.wm.StatusBarWidgetFactory
 import com.intellij.util.Consumer
+import dev.curt.codexjb.core.ProcessHealth
 import java.awt.Component
 import java.awt.event.MouseEvent
 
@@ -19,8 +20,7 @@ class CodexStatusBarFactory : StatusBarWidgetFactory {
 
 class CodexStatusBarWidget : StatusBarWidget, StatusBarWidget.TextPresentation {
     private var statusBar: StatusBar? = null
-    private var model: String = "auto"
-    private var effort: String = "medium"
+    private var state: CodexStatusBarController.State = CodexStatusBarController.State()
 
     override fun ID(): String = "codex.session.status.widget"
 
@@ -35,15 +35,14 @@ class CodexStatusBarWidget : StatusBarWidget, StatusBarWidget.TextPresentation {
     }
 
     override fun getPresentation(): StatusBarWidget.WidgetPresentation = this
-    override fun getText(): String = StatusTextBuilder.build(model, effort)
+    override fun getText(): String = StatusTextBuilder.build(state)
     override fun getAlignment(): Float = Component.CENTER_ALIGNMENT
     override fun getTooltipText(): String = "Codex session settings"
 
     override fun getClickConsumer(): Consumer<MouseEvent>? = Consumer { }
 
-    internal fun applyState(model: String, effort: String) {
-        this.model = model
-        this.effort = effort
+    internal fun applyState(state: CodexStatusBarController.State) {
+        this.state = state
         statusBar?.updateWidget(ID())
     }
 }
@@ -51,23 +50,36 @@ class CodexStatusBarWidget : StatusBarWidget, StatusBarWidget.TextPresentation {
 object CodexStatusBarController {
     private val lock = Any()
     private val widgets = mutableSetOf<CodexStatusBarWidget>()
-    private var currentModel: String = "auto"
-    private var currentEffort: String = "medium"
+    private var state = State()
 
-    fun update(model: String, effort: String) {
-        val snapshot: List<CodexStatusBarWidget>
+    data class State(
+        val model: String = "auto",
+        val effort: String = "medium",
+        val health: ProcessHealth.Status = ProcessHealth.Status.OK,
+        val tokensPerSecond: Double? = null
+    )
+
+    fun updateSession(model: String, effort: String) = updateState { copy(model = model, effort = effort) }
+
+    fun updateHealth(status: ProcessHealth.Status) = updateState { copy(health = status) }
+
+    fun updateTokens(tokensPerSecond: Double?) = updateState { copy(tokensPerSecond = tokensPerSecond) }
+
+    private fun updateState(transform: State.() -> State) {
+        val snapshotWidgets: List<CodexStatusBarWidget>
+        val newState: State
         synchronized(lock) {
-            currentModel = model
-            currentEffort = effort
-            snapshot = widgets.toList()
+            state = transform(state)
+            newState = state
+            snapshotWidgets = widgets.toList()
         }
-        snapshot.forEach { it.applyState(model, effort) }
+        snapshotWidgets.forEach { it.applyState(newState) }
     }
 
     fun register(widget: CodexStatusBarWidget) {
         synchronized(lock) {
             widgets += widget
-            widget.applyState(currentModel, currentEffort)
+            widget.applyState(state)
         }
     }
 
@@ -81,5 +93,19 @@ object CodexStatusBarController {
 object StatusTextBuilder {
     private const val SEPARATOR = " \u2022 "
 
-    fun build(model: String, effort: String): String = "Codex: $model$SEPARATOR$effort"
+    private fun ProcessHealth.Status.label(): String = when (this) {
+        ProcessHealth.Status.OK -> "Healthy"
+        ProcessHealth.Status.RESTARTING -> "Restarting"
+        ProcessHealth.Status.STALE -> "Stale"
+        ProcessHealth.Status.ERROR -> "Error"
+    }
+
+    fun build(state: CodexStatusBarController.State): String {
+        val parts = mutableListOf("Codex: ${state.model}", state.effort)
+        parts += state.health.label()
+        state.tokensPerSecond?.let {
+            parts += java.lang.String.format(java.util.Locale.US, "%.1f tok/s", it)
+        }
+        return parts.joinToString(SEPARATOR)
+    }
 }

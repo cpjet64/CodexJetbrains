@@ -6,6 +6,7 @@ import dev.curt.codexjb.core.CodexConfigService
 import dev.curt.codexjb.core.CodexLogger
 import dev.curt.codexjb.core.LogSink
 import dev.curt.codexjb.core.TelemetryService
+import dev.curt.codexjb.core.TurnMetricsService
 import dev.curt.codexjb.proto.*
 import dev.curt.codexjb.tooling.PatchApplier
 import dev.curt.codexjb.ui.settings.CodexSettingsConfigurable
@@ -276,15 +277,18 @@ class ChatPanel(
 
     private fun registerListeners() {
         registerBusListener("TurnDiff") { id, msg ->
+            TurnMetricsService.onDiffStart(id)
             val diff = msg.get("diff")?.asString ?: msg.get("text")?.asString ?: return@registerBusListener
             SwingUtilities.invokeLater { showDiffPanel(id, diff) }
         }
         registerBusListener("AgentMessageDelta") { id, msg ->
+            TurnMetricsService.onStreamDelta(id)
             if (id != activeTurnId) return@registerBusListener
             val delta = msg.get("delta")?.asString ?: return@registerBusListener
             SwingUtilities.invokeLater { appendAgentDelta(delta) }
         }
         registerBusListener("AgentMessage") { id, _ ->
+            TurnMetricsService.onStreamComplete(id)
             if (id != activeTurnId) return@registerBusListener
             SwingUtilities.invokeLater { sealAgentMessage() }
         }
@@ -317,6 +321,11 @@ class ChatPanel(
         registerBusListener("McpToolCallEnd", "mcp_tool_call_end", "ToolCallEnd") { _, msg ->
             handleMcpToolCallEnd(msg)
         }
+
+        registerBusListener("PatchApplyBegin") { id, _ -> TurnMetricsService.onApplyBegin(id) }
+        registerBusListener("PatchApplyEnd") { id, _ -> TurnMetricsService.onApplyEnd(id) }
+        registerBusListener("ExecCommandBegin") { id, _ -> TurnMetricsService.onExecStart(id) }
+        registerBusListener("ExecCommandEnd") { id, _ -> TurnMetricsService.onExecEnd(id) }
 
         registerBusListener("SessionConfigured", "session_configured") { id, _ ->
             onSessionConfigured(id)
@@ -539,6 +548,7 @@ class ChatPanel(
         setSending(true)
         turns.put(Turn(id))
         activeTurnId = id
+        TurnMetricsService.onSubmission(id)
         val sandbox = sandboxProvider()
         sender.send(buildSubmission(id, text, model, effort, sandbox))
     }
@@ -648,6 +658,7 @@ class ChatPanel(
         transcript.revalidate()
         transcript.repaint()
         turns.remove(turnId)
+        TurnMetricsService.onDiffEnd(turnId)
     }
 
 

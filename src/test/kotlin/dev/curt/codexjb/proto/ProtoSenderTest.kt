@@ -13,7 +13,7 @@ class ProtoSenderTest {
         val recorder = RecordingBackend(failFirst = true)
         val log = SenderRecordingLog()
         var reconnected = 0
-        val sender = ProtoSender(recorder, cfg, log) { reconnected += 1 }
+        val sender = ProtoSender(recorder, cfg, log, { reconnected += 1 }) { 0 }
 
         sender.send("{\"hello\":true}")
 

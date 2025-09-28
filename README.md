@@ -28,6 +28,12 @@ Several chat UI tasks remain in progress; see the TODO tracker for the exact bre
 3. Install the ZIP inside your IDE via *Settings > Plugins > Gear Icon > Install Plugin from Disk*.
 4. Launch a sandbox for manual testing with `./gradlew runIde`.
 
+## Troubleshooting
+- Open **Codex ▸ Settings** to verify the CLI path, WSL preference, and default session options. Per-project overrides are available from the same panel.
+- Use the **Diagnostics** tab in the Codex tool window to stream stderr output from the CLI. The copy button exports the buffer, and the clear button resets it (a log file with rotation is written under the IDE log directory).
+- If Codex becomes unresponsive, the plugin auto-restarts the CLI and marks the status bar health indicator as *Stale* or *Restarting*. Persistent errors surface as *Error*; collect diagnostics and the issue snapshot if this happens.
+- Run **Codex: Report Issue** from the Tools menu to copy a full environment snapshot (global/project settings, recent diagnostics, and health metrics) to your clipboard for GitHub issue reports.
+
 ## Development Workflow
 - Keep `JAVA_HOME` aligned with JDK 17; run `scripts/dev/check-java.ps1` (Windows) or
   `scripts/dev/check-java.sh` (Unix) if you are unsure.
