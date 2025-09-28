@@ -56,4 +56,4 @@ Please read `CONTRIBUTING.md` for coding style, testing expectations, and pull r
 etiquette. External contributions are welcome while the project is still stabilizing.
 
 ## License
-The project is distributed under the MIT License. See `LICENSE` for details.
+The project is distributed under the Apache License 2.0. See `LICENSE` for details.
