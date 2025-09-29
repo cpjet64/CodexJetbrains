@@ -364,3 +364,12 @@ FodyWeavers.xsd
 # Gradle
 .gradle/
 build/
+
+# JetBrains IDEs
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+
