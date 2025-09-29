@@ -2,7 +2,7 @@
 
 Codex for JetBrains is a community-driven IntelliJ Platform plugin that talks to the Codex CLI,
 opening a dedicated ToolWindow so you can review messages, approvals, and applied diffs without
-leaving the IDE. The codebase targets IntelliJ IDEA 2023.3 and relies on JDK 17 for builds and
+leaving the IDE. The codebase now targets IntelliJ IDEA 2025.2 and relies on JDK 17 for builds and
 runtime.
 
 > This repository is under active construction. Follow day-to-day progress in `TODO_JetBrains.md`.
@@ -19,7 +19,7 @@ Several chat UI tasks remain in progress; see the TODO tracker for the exact bre
 ## Prerequisites
 - Java Development Kit 17 (`JAVA_HOME` must point to it before running Gradle).
 - Codex CLI available on your PATH or configured in the plugin settings.
-- IntelliJ-based IDE 2023.3 or newer for installation and sandbox testing.
+- IntelliJ-based IDE 2025.2 or newer for installation and sandbox testing.
 
 ## Getting Started
 1. Clone the repository and open it in IntelliJ IDEA or another JetBrains IDE.
