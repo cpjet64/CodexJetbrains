@@ -1,4 +1,4 @@
-package dev.curt.codexjb.tooling
+﻿package dev.curt.codexjb.tooling
 
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vcs.FilePath
@@ -16,7 +16,12 @@ object GitStager {
         try {
             // Simple git add implementation without git4idea dependency
             val processBuilder = ProcessBuilder("git", "add")
-            processBuilder.directory(File(project.baseDir.path))
+            val basePath = project.basePath
+            if (basePath == null) {
+                log.warn("git stage skipped: project has no base path")
+                return
+            }
+            processBuilder.directory(File(basePath))
             absolutePaths.forEach { processBuilder.command().add(it) }
             
             val process = processBuilder.start()

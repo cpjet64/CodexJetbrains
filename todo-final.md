@@ -16,9 +16,11 @@ Execution Order
 - Within a section, complete tasks sequentially.
 
 ## F0. Immediate release blockers
-- [ ] [F0.1] Replace placeholder vendor name/email in plugin.xml with real maintainer info.
-- [ ] [F0.2] Supply polished description copy in plugin.xml that matches marketplace tone.
-- [ ] [F0.3] Ship pluginIcon.svg (1x/2x) and ensure Gradle packaging picks them up.
+- [x] [F0.1] Replace placeholder vendor name/email in plugin.xml with real maintainer info. (Done)
+- [x] [F0.2] Supply polished description copy in plugin.xml that matches marketplace tone. (Done)
+- [x] [F0.3] Ship pluginIcon.svg (1x/2x) and ensure Gradle packaging picks them up. (Done)
+- [x] [F0.4] Resolve unused parameter warnings surfaced by buildPlugin (Done: renamed to _id).
+- [x] [F0.5] Replace deprecated IntelliJ API calls noted in buildPlugin output. (Done)
 
 ## F1. Legal and policy readiness
 - [ ] [F1.1] Add NOTICE file referencing Apache 2.0 usage and bundled third-party licenses.
@@ -28,9 +30,9 @@ Execution Order
 - [ ] [F1.5] Define support contact and security disclosure channel for submission forms.
 
 ## F2. Build, packaging, and install verification
-- [ ] [F2.1] Re-run ./gradlew buildPlugin after metadata/icon work to ensure clean output.
-- [ ] [F2.2] Smoke install ZIP in IntelliJ IDEA 2023.3 (Windows) and capture screenshots.
-- [ ] [F2.3] Smoke install ZIP in Rider 2023.3 (Windows) and note any IDE-specific issues.
+- [x] [F2.1] Re-run ./gradlew buildPlugin after metadata/icon work to ensure clean output. (Done)
+- [ ] [F2.2] Smoke install ZIP in IntelliJ IDEA 2025.2 (Windows) and capture screenshots.
+- [ ] [F2.3] Smoke install ZIP in Rider 2025.2 (Windows) and note any IDE-specific issues.
 - [ ] [F2.4] Validate sandbox run via ./gradlew runIde with CLI session handshake.
 - [ ] [F2.5] Confirm diagnostics tab, diff viewer, and approvals work in the sandbox.
 - [ ] [F2.6] Finalize parity checklist vs VSIX manifest and store under docs/ or parity-report.

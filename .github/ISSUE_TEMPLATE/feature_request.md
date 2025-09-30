@@ -1,19 +1,28 @@
 ---
 name: Feature request
-about: Suggest an enhancement for the Codex JetBrains plugin
+about: Suggest an enhancement for the Codex JetBrains plugin.
+title: "[Feature]: "
 labels: enhancement
 ---
 
 ## Problem Statement
-What workflow or limitation should this feature address?
+Describe the workflow gap or limitation this feature should address.
+
+## Use Cases
+List the primary user flows or scenarios that benefit from this change.
 
 ## Proposed Solution
-Describe the change you would like to see. Include UI sketches or CLI interactions if helpful.
+Outline the desired behaviour. Include UI sketches, CLI flows, or protocol updates.
 
-## Alternatives Considered
-List other approaches you evaluated and why they were not chosen.
+## Success Criteria
+- [ ] What functional outcomes should be verifiable?
+- [ ] How will we measure adoption or quality improvements?
+
+## Risks & Open Questions
+Note uncertainties, edge cases, or dependencies that could block delivery.
 
 ## Additional Context
 - Related TODO entries or issues:
 - Estimated impact (e.g., UI polish, reliability, new capability):
-- Testing considerations:
+- Testing considerations (unit, integration, manual):
+- Rollout or documentation updates expected:

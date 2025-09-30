@@ -3,3 +3,6 @@ contact_links:
   - name: Task tracker (TODO_JetBrains.md)
     url: https://github.com/cpjet64/CodexJetbrains/blob/main/TODO_JetBrains.md
     about: Check the current backlog before opening a new issue.
+  - name: Contributing Guide
+    url: https://github.com/cpjet64/CodexJetbrains/blob/main/CONTRIBUTING.md
+    about: Review coding standards, testing expectations, and commit rules.

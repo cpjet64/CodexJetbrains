@@ -17,8 +17,8 @@ if [[ ! -x "$JAVA_BIN" ]]; then
 fi
 
 JAVA_VERSION=$("$JAVA_BIN" -version 2>&1 | head -n 1)
-if [[ "$JAVA_VERSION" != *"17."* ]]; then
-  err "Expected a Java 17 runtime but found: $JAVA_VERSION"
+if [[ "$JAVA_VERSION" != *"21."* ]]; then
+  err "Expected a Java 21 runtime but found: $JAVA_VERSION"
   exit 1
 fi
 

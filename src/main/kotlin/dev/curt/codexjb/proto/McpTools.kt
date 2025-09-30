@@ -14,7 +14,7 @@ class McpToolsModel {
     @Volatile var isServerAvailable: Boolean = true
         private set
 
-    fun onEvent(id: String, msg: JsonObject) {
+    fun onEvent(_id: String, msg: JsonObject) {
         val type = msg.get("type")?.asString ?: return
         when (type.lowercase()) {
             "mcplisttoolsresponse", "mcp_list_tools_response", "mcptoolslist" -> handleToolsList(msg)

@@ -1,4 +1,4 @@
-
+﻿
 package dev.curt.codexjb.ui.settings
 
 import com.google.gson.GsonBuilder
@@ -56,8 +56,8 @@ class CodexSettingsConfigurable : SearchableConfigurable {
     private val projectSandboxCombo = OverrideCombo(CodexDefaults.SANDBOX_POLICIES.map { it.id })
 
     private val testButton = JButton("Test connection")
-    private val exportButton = JButton("Export…")
-    private val importButton = JButton("Import…")
+    private val exportButton = JButton("Exportâ€¦")
+    private val importButton = JButton("Importâ€¦")
     private val resetButton = JButton("Reset to defaults")
     private val statusLabel = JBLabel("")
 
@@ -65,7 +65,7 @@ class CodexSettingsConfigurable : SearchableConfigurable {
 
     override fun getId(): String = SETTINGS_ID
 
-    override fun getDisplayName(): String = "Codex"
+    override fun getDisplayName(): String = "Codex (Unofficial)"
 
     override fun createComponent(): JComponent {
       if (panel == null) {
@@ -146,8 +146,12 @@ class CodexSettingsConfigurable : SearchableConfigurable {
     }
 
     private fun buildUI(): JPanel {
-      cliPathField.addBrowseFolderListener(TextBrowseFolderListener(FileChooserDescriptorFactory.createSingleFileDescriptor()))
-      projectCliField.addBrowseFolderListener(TextBrowseFolderListener(FileChooserDescriptorFactory.createSingleFileDescriptor()))
+      cliPathField.addBrowseFolderListener(
+        TextBrowseFolderListener(FileChooserDescriptorFactory.createSingleLocalFileDescriptor())
+      )
+      projectCliField.addBrowseFolderListener(
+        TextBrowseFolderListener(FileChooserDescriptorFactory.createSingleLocalFileDescriptor())
+      )
 
       sandboxCombo.renderer = sandboxRenderer()
       projectSandboxCombo.component.renderer = sandboxRenderer()
@@ -208,12 +212,15 @@ class CodexSettingsConfigurable : SearchableConfigurable {
       try {
         validateCliPath(path)
       } catch (ex: ConfigurationException) {
-        Messages.showErrorDialog(ex.message, "Codex")
+        val errorDetail = ex.localizedMessage
+          ?.takeIf { it.isNotBlank() }
+          ?: ex.javaClass.simpleName
+        Messages.showErrorDialog(errorDetail, "Codex")
         return
       }
 
       testButton.isEnabled = false
-      statusLabel.text = "Testing connection…"
+      statusLabel.text = "Testing connectionâ€¦"
       ApplicationManager.getApplication().executeOnPooledThread {
         val executor = DefaultCodexCliExecutor()
         val result = executor.run(path, "whoami", workingDirectory = null)
@@ -241,7 +248,7 @@ class CodexSettingsConfigurable : SearchableConfigurable {
         addProperty("default_effort", effortCombo.selectedItem as String)
         addProperty("default_approval_mode", (approvalCombo.selectedItem as ApprovalMode).name)
         addProperty("default_sandbox_policy", (sandboxCombo.selectedItem as CodexDefaults.SandboxOption).id)
-        projectSettings?.let { settings ->
+        projectSettings?.let { _ ->
           val projectJson = JsonObject().apply {
             addProperty("cli_path_override", projectCliField.text.trim().takeIf { it.isNotEmpty() })
             addProperty("use_wsl_override", projectUseWslBox.value)
@@ -290,7 +297,10 @@ class CodexSettingsConfigurable : SearchableConfigurable {
         }
         statusLabel.text = "Settings imported from " + file.fileName
       } catch (ex: Exception) {
-        Messages.showErrorDialog(project, "Failed to import settings: " + ex.message, "Codex")
+      val detail = ex.localizedMessage
+        ?.takeIf { it.isNotBlank() }
+        ?: ex.javaClass.simpleName
+      Messages.showErrorDialog(project, "Failed to import settings: " + detail, "Codex")
       }
     }
 

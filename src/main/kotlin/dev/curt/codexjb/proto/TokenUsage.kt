@@ -12,7 +12,7 @@ class TokenUsageModel {
     @Volatile var last: TokenUsage? = null
         private set
 
-    fun onEvent(id: String, msg: JsonObject) {
+    fun onEvent(_id: String, msg: JsonObject) {
         if (msg.get("type")?.asString != "TokenCount") return
         val u = TokenUsage(
             input = msg.get("input")?.asInt ?: 0,

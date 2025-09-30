@@ -39,11 +39,18 @@ class CodexToolWindowFactory : ToolWindowFactory {
     val effectiveSettings = cfg.effectiveSettings(project)
     val exe = effectiveSettings.cliPath ?: cfg.resolveExecutable(project.basePath?.let { Path.of(it) })
     if (exe == null) {
+      DiagnosticsService.append("Codex CLI not found; PATH=\"" + (System.getenv("PATH") ?: "") + "\"")
       val content = ContentFactory.getInstance()
         .createContent(JLabel("Codex CLI not found in PATH"), "Chat", false)
       toolWindow.contentManager.addContent(content)
       return
     }
+    DiagnosticsService.append(
+      "Resolved Codex CLI: " + exe.toString() +
+        " | os=" + EnvironmentInfo.os +
+        " | wsl_preference=" + effectiveSettings.useWsl +
+        (project.basePath?.let { " | project_base=\"$it\"" } ?: "")
+    )
     val baseConfig = CodexProcessConfig(executable = exe)
     val useWsl = effectiveSettings.useWsl && EnvironmentInfo.os == OperatingSystem.WINDOWS
     val processConfig = if (useWsl) {

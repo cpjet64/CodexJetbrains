@@ -9,7 +9,7 @@ class PromptsModel {
     @Volatile var prompts: List<Prompt> = emptyList()
         private set
 
-    fun onEvent(id: String, msg: JsonObject) {
+    fun onEvent(_id: String, msg: JsonObject) {
         val type = msg.get("type")?.asString ?: return
         if (type.lowercase() !in setOf("listcustompromptsresponse", "list_custom_prompts_response", "promptslist")) return
         val arr = when {

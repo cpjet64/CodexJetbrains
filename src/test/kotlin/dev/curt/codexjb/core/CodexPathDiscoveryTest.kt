@@ -54,7 +54,7 @@ class CodexPathDiscoveryTest {
     }
 
     @Test
-    fun findsWindowsCmdInPath() {
+  fun findsWindowsCmdInPath() {
         val tmp = Files.createTempDirectory("codex-path-win-")
         val cmd = tmp.resolve("codex.cmd")
         Files.writeString(cmd, "@echo off\necho codex\n")
@@ -67,6 +67,23 @@ class CodexPathDiscoveryTest {
         )
 
         assertEquals(cmd, found)
+  }
+
+    @Test
+    fun doesNotTreatExtensionlessAsWindowsExecutable() {
+        val tmp = Files.createTempDirectory("codex-path-win-noext-")
+        val bare = tmp.resolve("codex")
+        Files.writeString(bare, "echo codex\n")
+
+        val env = mapOf("Path" to tmp.toString())
+        val found = CodexPathDiscovery.discover(
+            os = OperatingSystem.WINDOWS,
+            env = env,
+            workingDirectory = null
+        )
+
+        // Should not pick the extensionless file on Windows
+        assertNull(found)
     }
 
     @Test
@@ -80,4 +97,3 @@ class CodexPathDiscoveryTest {
         assertNull(found)
     }
 }
-

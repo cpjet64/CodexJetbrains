@@ -85,7 +85,9 @@ object CodexPathDiscovery {
 
     private fun hasWindowsExecutableExt(p: Path): Boolean {
         val name = p.fileName.toString().lowercase()
-        return windowsExts.any { name.endsWith(it) } || name == "codex"
+        // Only accept files with known executable extensions on Windows.
+        // Do NOT treat bare "codex" (no extension) as executable; that often points to a
+        // Unix shim placed by package managers and will fail with CreateProcess error 193.
+        return windowsExts.any { name.endsWith(it) }
     }
 }
-
