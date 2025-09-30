@@ -378,11 +378,13 @@ cli-output.txt
 stacktrace.txt
 todo-final.md
 sourceoftruth.md
-todo-final.md
 todo-source.md
-todo-final.md
 ubuntu-todo.md
 
 # Ignore Windows device filename accidentally created
 CON
+
+
+# IntelliJ Platform Gradle plugin cache
+.intellijPlatform/
 

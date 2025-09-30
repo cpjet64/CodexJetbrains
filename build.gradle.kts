@@ -8,7 +8,7 @@ plugins {
 group = "dev.curt"
 version = "0.1.0"
 
-// Java/Kotlin toolchains — align to Java 21 for 252-only support
+// Java/Kotlin toolchains - align to Java 21 for 252-only support
 java {
   toolchain.languageVersion.set(JavaLanguageVersion.of(21))
 }
