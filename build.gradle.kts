@@ -1,18 +1,14 @@
+@file:Suppress("DEPRECATION")
 plugins {
   id("java")
   id("org.jetbrains.kotlin.jvm") version "2.0.20"
-  id("org.jetbrains.intellij.platform") version "2.9.0"
+  id("org.jetbrains.intellij.platform")
 }
 
 group = "dev.curt"
 version = "0.1.0"
 
-repositories {
-  // Keep minimal; JetBrains repos are centrally managed in settings.gradle.kts
-  mavenCentral()
-}
-
-// Java/Kotlin toolchains â€” align to Java 21 for 252-only support
+// Java/Kotlin toolchains — align to Java 21 for 252-only support
 java {
   toolchain.languageVersion.set(JavaLanguageVersion.of(21))
 }
