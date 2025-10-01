@@ -34,6 +34,7 @@ class CodexConfigServiceTest {
         svc.openToolWindowOnStartup = true
         svc.defaultModel = "gpt-4o-mini"
         svc.defaultSandboxPolicy = "danger-full-access"
+        svc.availableModels = listOf("custom-model")
 
         svc.resetToDefaults()
 
@@ -41,5 +42,23 @@ class CodexConfigServiceTest {
         assertEquals(false, svc.openToolWindowOnStartup)
         assertEquals(null, svc.defaultModel)
         assertEquals(null, svc.defaultSandboxPolicy)
+        assertEquals(CodexSettingsOptions.MODELS, svc.availableModels)
+    }
+
+    @Test
+    fun customModelListOverridesDefaults() {
+        val svc = CodexConfigService()
+        assertEquals(CodexSettingsOptions.MODELS, svc.availableModels)
+
+        svc.availableModels = listOf("alpha", "beta", "alpha", "")
+
+        assertEquals(listOf("alpha", "beta"), svc.availableModels)
+
+        svc.defaultModel = "legacy"
+        svc.availableModels = listOf("x")
+
+        assertEquals(listOf("x"), svc.availableModels)
+        assertEquals("x", svc.defaultModel)
     }
 }
+

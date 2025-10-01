@@ -5,6 +5,7 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.google.gson.GsonBuilder
+import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.intellij.openapi.project.Project
 import com.intellij.util.xmlb.XmlSerializerUtil
@@ -30,7 +31,8 @@ class CodexConfigService : PersistentStateComponent<CodexConfigService.State> {
         var autoOpenConsoleOnExec: Boolean = false,
         var consoleVisible: Boolean = false,
         var lastUsedTool: String? = null,
-        var lastUsedPrompt: String? = null
+        var lastUsedPrompt: String? = null,
+        var customModels: MutableList<String> = mutableListOf()
     )
 
     private var state = State()
@@ -38,6 +40,21 @@ class CodexConfigService : PersistentStateComponent<CodexConfigService.State> {
     var cliPath: Path?
         get() = state.cliPathStr?.let { Path.of(it) }
         set(value) { state.cliPathStr = value?.toString() }
+
+    var availableModels: List<String>
+        get() = if (state.customModels.isNotEmpty()) state.customModels.toList() else CodexSettingsOptions.MODELS
+        set(value) {
+            val sanitized = value.map(String::trim).filter { it.isNotEmpty() }.distinct()
+            state.customModels.clear()
+            state.customModels.addAll(sanitized)
+            val valid = availableModels
+            if (state.defaultModel != null && state.defaultModel !in valid) {
+                state.defaultModel = valid.firstOrNull()
+            }
+            if (state.lastModel != null && state.lastModel !in valid) {
+                state.lastModel = valid.firstOrNull()
+            }
+        }
 
     var defaultArgs: List<String> = listOf("proto")
 
@@ -145,6 +162,8 @@ class CodexConfigService : PersistentStateComponent<CodexConfigService.State> {
             addProperty("default_effort", state.defaultEffort)
             addProperty("default_approval_mode", state.defaultApprovalMode)
             addProperty("default_sandbox_policy", state.defaultSandboxPolicy)
+            val modelsArray = JsonArray().apply { availableModels.forEach { add(it) } }
+            add("available_models", modelsArray)
         }
         if (includeProjectOverrides) {
             val projectOverrides = JsonObject()
@@ -163,6 +182,11 @@ class CodexConfigService : PersistentStateComponent<CodexConfigService.State> {
         state.defaultEffort = obj.get("default_effort")?.takeIf { !it.isJsonNull }?.asString
         state.defaultApprovalMode = obj.get("default_approval_mode")?.takeIf { !it.isJsonNull }?.asString
         state.defaultSandboxPolicy = obj.get("default_sandbox_policy")?.takeIf { !it.isJsonNull }?.asString
+        obj.getAsJsonArray("available_models")?.let { array ->
+            availableModels = array.mapNotNull { element ->
+                if (element.isJsonNull) null else element.asString
+            }
+        }
     }
 
     fun resetToDefaults() {
@@ -185,3 +209,4 @@ data class EffectiveSettings(
     val defaultApprovalMode: String?,
     val defaultSandboxPolicy: String?
 )
+

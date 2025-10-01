@@ -65,9 +65,9 @@ class CodexToolWindowFactory : ToolWindowFactory {
     proc.start(processConfig)
     attachReader(proc, bus, log)
 
-    val models = CodexDefaults.MODELS.toTypedArray()
-    val efforts = CodexDefaults.EFFORTS.toTypedArray()
-    val sandboxOptions = CodexDefaults.SANDBOX_POLICIES.toTypedArray()
+    val models = cfg.availableModels.toTypedArray()
+    val efforts = CodexSettingsOptions.EFFORTS.toTypedArray()
+    val sandboxOptions = CodexSettingsOptions.SANDBOX_POLICIES.toTypedArray()
     val modelCombo = JComboBox(models)
     val effortCombo = JComboBox(efforts)
     val approvalModes = ApprovalMode.values()
@@ -105,7 +105,7 @@ class CodexToolWindowFactory : ToolWindowFactory {
         cellHasFocus: Boolean
       ): Component {
         val renderer = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
-        if (value is CodexDefaults.SandboxOption) {
+        if (value is CodexSettingsOptions.SandboxOption) {
           text = value.label
         }
         return renderer
@@ -161,7 +161,7 @@ class CodexToolWindowFactory : ToolWindowFactory {
       approvalWarn.isVisible = (approvalCombo.selectedItem as ApprovalMode) == ApprovalMode.FULL_ACCESS
     }
     sandboxCombo.addActionListener {
-      val option = sandboxCombo.selectedItem as CodexDefaults.SandboxOption
+      val option = sandboxCombo.selectedItem as CodexSettingsOptions.SandboxOption
       cfg.lastSandboxPolicy = option.id
       sandboxWarn.isVisible = option.id == "danger-full-access"
     }
@@ -197,7 +197,7 @@ class CodexToolWindowFactory : ToolWindowFactory {
       modelProvider = { modelCombo.selectedItem as String },
       effortProvider = { effortCombo.selectedItem as String },
       cwdProvider = { project.basePath?.let { Path.of(it) } },
-      sandboxProvider = { (sandboxCombo.selectedItem as CodexDefaults.SandboxOption).id }
+      sandboxProvider = { (sandboxCombo.selectedItem as CodexSettingsOptions.SandboxOption).id }
     )
     panel.add(chat, BorderLayout.CENTER)
 
@@ -383,3 +383,4 @@ class CodexToolWindowFactory : ToolWindowFactory {
     return EnvelopeJson.encodeSubmission(SubmissionEnvelope(Ids.newId(), "Submit", body))
   }
 }
+

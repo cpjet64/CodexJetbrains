@@ -1,0 +1,126 @@
+# Top-level editorconfig
+root = true
+
+###############################################################################
+# Defaults (applies to everything unless overridden)
+###############################################################################
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+tab_width = 4
+# Keep this human; tools like ktlint/prettier can enforce stricter if you want.
+max_line_length = 120
+
+###############################################################################
+# Languages / file types
+###############################################################################
+
+# Kotlin sources
+[*.kt]
+indent_style = space
+indent_size = 4
+tab_width = 4
+# Many tools respect this, mirrors IntelliJ default behavior for wrapping:
+continuation_indent_size = 8
+
+# Kotlin Gradle scripts (usually 2-space style)
+[*.kts]
+indent_style = space
+indent_size = 2
+tab_width = 2
+continuation_indent_size = 4
+
+# Groovy Gradle scripts (if any)
+[*.gradle]
+indent_style = space
+indent_size = 2
+tab_width = 2
+
+# Java sources
+[*.java]
+indent_style = space
+indent_size = 4
+tab_width = 4
+continuation_indent_size = 8
+
+# XML (plugin.xml, misc configs)
+[*.xml]
+indent_style = space
+indent_size = 2
+tab_width = 2
+
+# Properties / TOML
+[*.{properties,toml}]
+indent_style = space
+indent_size = 2
+tab_width = 2
+
+# YAML & JSON
+[*.{yml,yaml,json}]
+indent_style = space
+indent_size = 2
+tab_width = 2
+
+# Markdown: don’t nuke spaces used for code blocks/formatting; allow long lines
+[*.md]
+trim_trailing_whitespace = false
+max_line_length = off
+indent_style = space
+indent_size = 2
+tab_width = 2
+
+# Shell scripts must be LF
+[*.sh]
+end_of_line = lf
+indent_style = space
+indent_size = 2
+tab_width = 2
+
+# PowerShell and Windows batch keep CRLF to avoid Windows tooling hiccups
+[*.ps1]
+end_of_line = crlf
+indent_style = space
+indent_size = 4
+tab_width = 4
+
+[*.{bat,cmd}]
+end_of_line = crlf
+indent_style = space
+indent_size = 4
+tab_width = 4
+
+# Makefiles need literal tabs
+[Makefile]
+indent_style = tab
+
+###############################################################################
+# Project bits / generated content
+###############################################################################
+
+# Keep LF but don’t enforce width; generated files can be messy
+[*.min.*]
+max_line_length = off
+trim_trailing_whitespace = false
+
+# SVG is text; keep LF for cleaner diffs
+[*.svg]
+end_of_line = lf
+
+###############################################################################
+# (Optional) IntelliJ-specific tweaks — uncomment if you want IJ to enforce more
+# These keys are ignored by VS/VS Code but help align formatting across JetBrains.
+###############################################################################
+# [*.kt]
+# ij_kotlin_continuation_indent_size = 8
+# ij_kotlin_allow_trailing_comma = true
+# ij_kotlin_name_count_to_use_star_import = 2147483647
+# ij_kotlin_packages_to_use_import_on_demand =
+
+# [*.java]
+# ij_java_continuation_indent_size = 8
+# ij_java_names_count_to_use_import_on_demand = 2147483647
+# ij_java_class_count_to_use_import_on_demand = 2147483647
