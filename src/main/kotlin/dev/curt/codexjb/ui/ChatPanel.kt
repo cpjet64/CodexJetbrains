@@ -13,6 +13,8 @@ import dev.curt.codexjb.ui.settings.CodexSettingsConfigurable
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.options.ShowSettingsUtil
+import com.intellij.ui.JBColor
+import com.intellij.util.ui.UIUtil
 import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
@@ -23,13 +25,29 @@ import java.nio.file.Path
 import javax.swing.*
 import javax.swing.border.EmptyBorder
 
+
+private object ChatPalette {
+    private fun bubbleColor(name: String, light: Int, dark: Int): Color =
+        JBColor.namedColor(name, JBColor(Color(light), Color(dark)))
+
+    val panelBackground: Color
+        get() = UIUtil.getPanelBackground()
+
+    val bubbleForeground: Color
+        get() = UIUtil.getLabelForeground()
+
+    val toolCallBackground: Color = bubbleColor("Codex.Chat.ToolCall.background", 0xF0F6FF, 0x1F2A3C)
+    val userBubbleBackground: Color = bubbleColor("Codex.Chat.UserBubble.background", 0xE8F0FE, 0x2A364C)
+    val agentBubbleBackground: Color = bubbleColor("Codex.Chat.AgentBubble.background", 0xF1F3F4, 0x3A3F46)
+}
+
 class ChatPanel(
     private val sender: ProtoSender,
     private val bus: EventBus,
     private val turns: TurnRegistry,
     private val project: Project? = null,
     private val modelProvider: () -> String,
-    private val effortProvider: () -> String,
+    private val reasoningProvider: () -> String,
     private val cwdProvider: () -> Path?,
     private val mcpTools: McpToolsModel = McpToolsModel(),
     private val prompts: PromptsModel = PromptsModel(),
@@ -62,6 +80,8 @@ class ChatPanel(
     init {
         transcript.layout = BoxLayout(transcript, BoxLayout.Y_AXIS)
         transcript.border = EmptyBorder(8, 8, 8, 8)
+        transcript.background = ChatPalette.panelBackground
+        scroll.viewport.background = ChatPalette.panelBackground
         scroll.verticalScrollBar.unitIncrement = 16
         installContextMenu()
         setupToolsPanel()
@@ -518,7 +538,8 @@ class ChatPanel(
         val timeStr = java.text.SimpleDateFormat("HH:mm:ss").format(java.util.Date(timestamp))
         val message = JTextArea("[$timeStr] $text")
         message.isEditable = false
-        message.background = Color(240, 248, 255) // Light blue background for tool calls
+        message.background = ChatPalette.toolCallBackground
+        message.foreground = ChatPalette.bubbleForeground
         message.border = EmptyBorder(4, 8, 4, 8)
         message.lineWrap = true
         message.wrapStyleWord = true
@@ -542,7 +563,7 @@ class ChatPanel(
     internal fun submitWithId(text: String, id: String) {
         if (send.isEnabled.not()) return
         val model = modelProvider()
-        val effort = effortProvider()
+        val effort = reasoningProvider()
         renderUserBubble(text)
         prepareAgentBubble()
         setSending(true)
@@ -571,7 +592,8 @@ class ChatPanel(
     private fun addUserMessage(text: String) {
         val label = JLabel(text)
         label.isOpaque = true
-        label.background = Color(0xE8F0FE)
+        label.background = ChatPalette.userBubbleBackground
+        label.foreground = ChatPalette.bubbleForeground
         label.border = EmptyBorder(8, 8, 8, 8)
         label.alignmentX = Component.RIGHT_ALIGNMENT
         transcript.add(Box.createVerticalStrut(4))
@@ -590,7 +612,8 @@ class ChatPanel(
         area.lineWrap = true
         area.wrapStyleWord = true
         area.isEditable = false
-        area.background = Color(0xF1F3F4)
+        area.background = ChatPalette.agentBubbleBackground
+        area.foreground = ChatPalette.bubbleForeground
         area.border = EmptyBorder(8, 8, 8, 8)
         currentAgentArea = area
         transcript.add(Box.createVerticalStrut(4))
@@ -705,3 +728,4 @@ class ChatPanel(
         private const val SETTINGS_ID = "dev.curt.codexjb.settings"
     }
 }
+

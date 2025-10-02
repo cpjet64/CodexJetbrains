@@ -19,7 +19,7 @@ class CodexReportIssueAction : AnAction("Codex: Report Issue") {
             appendLine("WSL Enabled: ${appSettings.useWsl}")
             appendLine("Startup Auto-Open: ${appSettings.openToolWindowOnStartup}")
             appendLine("Default Model: ${appSettings.defaultModel ?: "(auto)"}")
-            appendLine("Default Effort: ${appSettings.defaultEffort ?: "(auto)"}")
+            appendLine("Default Reasoning: ${appSettings.defaultEffort ?: "(auto)"}")
             appendLine("Default Approval: ${appSettings.defaultApprovalMode ?: "(auto)"}")
             appendLine("Default Sandbox: ${appSettings.defaultSandboxPolicy ?: "workspace-write"}")
             val health = ProcessHealth.snapshot()
@@ -49,4 +49,5 @@ class CodexReportIssueAction : AnAction("Codex: Report Issue") {
             .notify(e.project)
     }
 }
+
 

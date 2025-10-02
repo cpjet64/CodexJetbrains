@@ -32,9 +32,10 @@ object DiagnosticsService {
     }
 
     fun append(rawLine: String) {
-        val line = rawLine.removeSuffix("\n").removeSuffix("\r")
+        val normalized = rawLine.removeSuffix("\n").removeSuffix("\r")
+        val redacted = SensitiveDataRedactor.redact(normalized)
         val timestamp = timestampFormatter.format(Instant.now().atZone(ZoneId.systemDefault()))
-        val stamped = "$timestamp | $line"
+        val stamped = "$timestamp | $redacted"
         lock.withLock {
             lines.addLast(stamped)
             while (lines.size > MAX_LINES) {

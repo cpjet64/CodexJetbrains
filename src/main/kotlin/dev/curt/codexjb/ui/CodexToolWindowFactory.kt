@@ -66,36 +66,49 @@ class CodexToolWindowFactory : ToolWindowFactory {
     attachReader(proc, bus, log)
 
     val models = cfg.availableModels.toTypedArray()
-    val efforts = CodexSettingsOptions.EFFORTS.toTypedArray()
     val sandboxOptions = CodexSettingsOptions.SANDBOX_POLICIES.toTypedArray()
+    val approvalLevels = CodexSettingsOptions.APPROVAL_LEVELS.toTypedArray()
     val modelCombo = JComboBox(models)
-    val effortCombo = JComboBox(efforts)
-    val approvalModes = ApprovalMode.values()
-    val approvalCombo = JComboBox(approvalModes)
+    val reasoningCombo = JComboBox<String>()
+    val approvalCombo = JComboBox(approvalLevels)
     val sandboxCombo = JComboBox(DefaultComboBoxModel(sandboxOptions))
 
     fun selectModel(initial: String?) {
       initial?.let { models.indexOf(it).takeIf { idx -> idx >= 0 }?.let(modelCombo::setSelectedIndex) }
     }
-    fun selectEffort(initial: String?) {
-      initial?.let { efforts.indexOf(it).takeIf { idx -> idx >= 0 }?.let(effortCombo::setSelectedIndex) }
-    }
     fun selectApproval(initial: String?) {
       initial?.let {
-        approvalModes.indexOfFirst { mode -> mode.name == it }
+        approvalLevels.indexOfFirst { option -> option.mode.name == it }
           .takeIf { idx -> idx >= 0 }
           ?.let(approvalCombo::setSelectedIndex)
       }
     }
 
+    fun refreshReasoningOptions(preferred: String? = null) {
+      val selectedModel = modelCombo.selectedItem as? String
+      val allowed = CodexSettingsOptions.reasoningLevelsForModel(selectedModel)
+      val previous = preferred ?: (reasoningCombo.selectedItem as? String) ?: cfg.lastEffort ?: effectiveSettings.defaultEffort
+      val model = DefaultComboBoxModel(allowed.toTypedArray())
+      reasoningCombo.model = model
+      val target = when {
+        previous != null && allowed.contains(previous) -> previous
+        allowed.isNotEmpty() -> allowed.first()
+        else -> null
+      }
+      if (target != null) {
+        reasoningCombo.selectedItem = target
+      } else {
+        reasoningCombo.selectedIndex = -1
+      }
+    }
+
     selectModel(cfg.lastModel ?: effectiveSettings.defaultModel)
-    selectEffort(cfg.lastEffort ?: effectiveSettings.defaultEffort)
+    refreshReasoningOptions(cfg.lastEffort ?: effectiveSettings.defaultEffort)
     selectApproval(cfg.lastApprovalMode ?: effectiveSettings.defaultApprovalMode)
 
-    if (modelCombo.selectedIndex < 0) modelCombo.selectedIndex = 0
-    if (effortCombo.selectedIndex < 0) effortCombo.selectedIndex = 0
-    if (approvalCombo.selectedIndex < 0) approvalCombo.selectedItem = ApprovalMode.CHAT
-
+    if (modelCombo.selectedIndex < 0 && models.isNotEmpty()) modelCombo.selectedIndex = 0
+    if (reasoningCombo.selectedIndex < 0) reasoningCombo.selectedIndex = 0
+    if (approvalCombo.selectedIndex < 0) approvalCombo.selectedItem = CodexSettingsOptions.APPROVAL_LEVELS.first()
     sandboxCombo.renderer = object : DefaultListCellRenderer() {
       override fun getListCellRendererComponent(
         list: javax.swing.JList<*>,
@@ -111,6 +124,21 @@ class CodexToolWindowFactory : ToolWindowFactory {
         return renderer
       }
     }
+    approvalCombo.renderer = object : DefaultListCellRenderer() {
+      override fun getListCellRendererComponent(
+        list: javax.swing.JList<*>,
+        value: Any?,
+        index: Int,
+        isSelected: Boolean,
+        cellHasFocus: Boolean
+      ): Component {
+        val renderer = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
+        if (value is CodexSettingsOptions.ApprovalLevelOption) {
+          text = value.label
+        }
+        return renderer
+      }
+    }
     val initialSandboxId = cfg.lastSandboxPolicy
       ?: effectiveSettings.defaultSandboxPolicy
       ?: sandboxOptions.first().id
@@ -120,45 +148,48 @@ class CodexToolWindowFactory : ToolWindowFactory {
     val pushStatusBar = {
       CodexStatusBarController.updateSession(
         modelCombo.selectedItem as String,
-        effortCombo.selectedItem as String
+        reasoningCombo.selectedItem as String
       )
     }
     pushStatusBar()
     val header = JPanel().apply {
       add(JLabel("Model:"))
       add(modelCombo)
-      add(JLabel("Effort:"))
-      add(effortCombo)
-      add(JLabel("Approvals:"))
+      add(JLabel("Reasoning:"))
+      add(reasoningCombo)
+      add(JLabel("Approval:"))
       add(approvalCombo)
       add(JLabel("Sandbox:"))
       add(sandboxCombo)
     }
     val approvalWarn = JLabel("Full Access mode")
     approvalWarn.foreground = java.awt.Color(0xB0, 0, 0)
-    approvalWarn.isVisible = (approvalCombo.selectedItem as ApprovalMode) == ApprovalMode.FULL_ACCESS
+    val initialApproval = approvalCombo.selectedItem as CodexSettingsOptions.ApprovalLevelOption
+    approvalWarn.isVisible = initialApproval.mode == ApprovalMode.FULL_ACCESS
     header.add(approvalWarn)
     val sandboxWarn = JLabel("Sandbox: Full Access")
     sandboxWarn.foreground = java.awt.Color(0xB0, 0, 0)
     sandboxWarn.isVisible = initialSandbox.id == "danger-full-access"
     header.add(sandboxWarn)
     modelCombo.accessibleContext.accessibleName = "Model selector"
-    effortCombo.accessibleContext.accessibleName = "Effort selector"
-    approvalCombo.accessibleContext.accessibleName = "Approval mode selector"
+    reasoningCombo.accessibleContext.accessibleName = "Reasoning level selector"
+    approvalCombo.accessibleContext.accessibleName = "Approval level selector"
     sandboxCombo.accessibleContext.accessibleName = "Sandbox policy selector"
     modelCombo.addActionListener {
       val model = modelCombo.selectedItem as String
       cfg.lastModel = model
+      refreshReasoningOptions()
       pushStatusBar()
     }
-    effortCombo.addActionListener {
-      val effort = effortCombo.selectedItem as String
-      cfg.lastEffort = effort
+    reasoningCombo.addActionListener {
+      val reasoning = reasoningCombo.selectedItem as String
+      cfg.lastEffort = reasoning
       pushStatusBar()
     }
     approvalCombo.addActionListener {
-      cfg.lastApprovalMode = (approvalCombo.selectedItem as ApprovalMode).name
-      approvalWarn.isVisible = (approvalCombo.selectedItem as ApprovalMode) == ApprovalMode.FULL_ACCESS
+      val option = approvalCombo.selectedItem as CodexSettingsOptions.ApprovalLevelOption
+      cfg.lastApprovalMode = option.mode.name
+      approvalWarn.isVisible = option.mode == ApprovalMode.FULL_ACCESS
     }
     sandboxCombo.addActionListener {
       val option = sandboxCombo.selectedItem as CodexSettingsOptions.SandboxOption
@@ -195,7 +226,7 @@ class CodexToolWindowFactory : ToolWindowFactory {
       turns = turns,
       project = project,
       modelProvider = { modelCombo.selectedItem as String },
-      effortProvider = { effortCombo.selectedItem as String },
+      reasoningProvider = { reasoningCombo.selectedItem as String },
       cwdProvider = { project.basePath?.let { Path.of(it) } },
       sandboxProvider = { (sandboxCombo.selectedItem as CodexSettingsOptions.SandboxOption).id }
     )
@@ -232,7 +263,7 @@ class CodexToolWindowFactory : ToolWindowFactory {
 
     val store = ApprovalStore()
     val approvals = ApprovalsController(
-      modeProvider = { approvalCombo.selectedItem as ApprovalMode },
+      modeProvider = { (approvalCombo.selectedItem as CodexSettingsOptions.ApprovalLevelOption).mode },
       store = store,
       onDecision = {
         val body = it.getAsJsonObject("body")
@@ -383,4 +414,11 @@ class CodexToolWindowFactory : ToolWindowFactory {
     return EnvelopeJson.encodeSubmission(SubmissionEnvelope(Ids.newId(), "Submit", body))
   }
 }
+
+
+
+
+
+
+
 

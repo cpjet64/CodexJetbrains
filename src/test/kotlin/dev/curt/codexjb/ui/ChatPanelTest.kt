@@ -27,7 +27,7 @@ class ChatPanelTest {
             bus = bus,
             turns = turns,
             modelProvider = { "gpt-4.1-mini" },
-            effortProvider = { "medium" },
+            reasoningProvider = { "medium" },
             cwdProvider = { Paths.get("/work") }
         )
         assertTrue(sent.any { it.contains("ListMcpTools", ignoreCase = true) })
@@ -58,7 +58,7 @@ class ChatPanelTest {
             bus = bus,
             turns = turns,
             modelProvider = { "gpt-4.1-mini" },
-            effortProvider = { "medium" },
+            reasoningProvider = { "medium" },
             cwdProvider = { Paths.get("/work") }
         )
         SwingUtilities.invokeAndWait { panel.submit("Hello") }
@@ -85,7 +85,7 @@ class ChatPanelTest {
             bus = bus,
             turns = turns,
             modelProvider = { "gpt-4.1-mini" },
-            effortProvider = { "medium" },
+            reasoningProvider = { "medium" },
             cwdProvider = { Paths.get("/work") }
         )
         val id = "t-ui-1"
@@ -101,3 +101,4 @@ class ChatPanelTest {
         assertEquals(1, turns.size())
     }
 }
+

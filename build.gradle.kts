@@ -1,64 +1,22 @@
-@file:Suppress("DEPRECATION")
-
 plugins {
-    id("java")
-    id("org.jetbrains.kotlin.jvm") version "2.2.20"
-    id("org.jetbrains.intellij.platform")
+  kotlin("jvm") version "1.9.24"
+  id("org.jetbrains.intellij.platform") version "2.0.1"
 }
 
-group = "dev.curt"
-version = "0.1.0"
-
-java {
-    toolchain.languageVersion.set(JavaLanguageVersion.of(21))
-}
-
-kotlin {
-    jvmToolchain(21)
-}
-
-intellijPlatform {
-    pluginConfiguration {
-        id.set("dev.curt.codexjb")
-        name.set("Codex (Unofficial)")
-        ideaVersion {
-            sinceBuild = "252"
-            untilBuild = "252.*"
-        }
-    }
-    pluginVerification {
-        ides { recommended() }
-    }
-}
+// No intellijPlatform{} and no repositories{} here.
+// Use raw coords for tests aligned by BOM.
+val platformVersion = providers.gradleProperty("platformVersion").getOrElse("2024.1")
 
 dependencies {
-    implementation("com.google.code.gson:gson:2.10.1")
-    testImplementation(kotlin("test"))
-    testImplementation(kotlin("test-junit5"))
-    testImplementation("junit:junit:4.13.2")
-    testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.10.2")
-
-    intellijPlatform {
-        intellijIdeaCommunity("2025.2.2")
-        bundledPlugin("com.intellij.java")
-        // intellijIdeaCommunity("2025.2.2", useInstaller = false)
-        // jetbrainsRuntime()
-    }
+  testImplementation(platform("com.jetbrains.intellij.platform:intellij-platform-bom:$platformVersion"))
+  testImplementation("com.jetbrains.intellij.platform:test-framework")
+  // If needed:
+  // testImplementation("com.jetbrains.intellij.platform:test-framework-core")
+  testImplementation("org.junit.jupiter:junit-jupiter-api:5.10.2")
+  testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.10.2")
 }
 
-tasks {
-    named("buildSearchableOptions") { enabled = false }
-
-    test {
-        useJUnitPlatform()
-    }
-
-    withType<JavaExec>().configureEach {
-        if (name == "runIde") {
-            val home = System.getProperty("user.home")
-            systemProperty("idea.system.path", "$home/.codex-idea-sandbox/system")
-            systemProperty("idea.config.path", "$home/.codex-idea-sandbox/config")
-            systemProperty("idea.plugins.path", "$home/.codex-idea-sandbox/plugins")
-        }
-    }
+tasks.test {
+  useJUnitPlatform()
+  systemProperty("idea.platform.prefix", "Idea")
 }

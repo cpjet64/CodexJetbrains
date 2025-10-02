@@ -1,4 +1,4 @@
-﻿package dev.curt.codexjb.ui
+package dev.curt.codexjb.ui
 
 import dev.curt.codexjb.core.CodexProcessConfig
 import dev.curt.codexjb.core.LogSink
@@ -65,7 +65,7 @@ class ChatPanelDebounceTest {
                     bus = EventBus(),
                     turns = TurnRegistry(),
                     modelProvider = { "test-model" },
-                    effortProvider = { "test-effort" },
+                    reasoningProvider = { "test-effort" },
                     cwdProvider = { null }
                 )
             )
@@ -95,3 +95,4 @@ class ChatPanelDebounceTest {
         private val TEST_CONFIG = CodexProcessConfig(executable = Paths.get("/usr/bin/codex"))
     }
 }
+

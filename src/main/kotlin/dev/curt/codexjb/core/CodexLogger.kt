@@ -25,15 +25,16 @@ private class IntelliJLogSink(category: String) : LogSink {
     private val logger = Logger.getInstance(category)
 
     override fun info(message: String) {
-        logger.info(message)
+        logger.info(SensitiveDataRedactor.redact(message))
     }
 
     override fun warn(message: String) {
-        logger.warn(message)
+        logger.warn(SensitiveDataRedactor.redact(message))
     }
 
     override fun error(message: String, t: Throwable?) {
-        if (t != null) logger.error(message, t) else logger.error(message)
+        val sanitized = SensitiveDataRedactor.redact(message)
+        if (t != null) logger.error(sanitized, t) else logger.error(sanitized)
     }
 }
 

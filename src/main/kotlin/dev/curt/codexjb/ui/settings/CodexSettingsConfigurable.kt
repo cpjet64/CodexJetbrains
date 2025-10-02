@@ -35,6 +35,7 @@ import javax.swing.JCheckBox
 import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.DefaultComboBoxModel
 
 class CodexSettingsConfigurable : SearchableConfigurable {
     private val appConfig = ApplicationManager.getApplication().getService(CodexConfigService::class.java)
@@ -48,8 +49,9 @@ class CodexSettingsConfigurable : SearchableConfigurable {
 
     private val modelComboModel = javax.swing.DefaultComboBoxModel<String>()
     private val modelCombo = JComboBox(modelComboModel)
-    private val effortCombo = JComboBox(CodexSettingsOptions.EFFORTS.toTypedArray())
-    private val approvalCombo = JComboBox(ApprovalMode.values())
+    private val reasoningCombo = JComboBox<String>()
+    private val approvalComboModel = DefaultComboBoxModel(CodexSettingsOptions.APPROVAL_LEVELS.toTypedArray())
+    private val approvalCombo = JComboBox(approvalComboModel)
     private val sandboxCombo = JComboBox(CodexSettingsOptions.SANDBOX_POLICIES.toTypedArray())
 
     private val modelsListModel = javax.swing.DefaultListModel<String>()
@@ -65,7 +67,7 @@ class CodexSettingsConfigurable : SearchableConfigurable {
         .addExtraAction(object : AnActionButton("Restore Defaults") {
             override fun actionPerformed(e: AnActionEvent) {
                 setModelEntries(CodexSettingsOptions.MODELS, CodexSettingsOptions.MODELS.first())
-                refreshModelDropdowns(CodexSettingsOptions.MODELS.first())
+                refreshModelDropdowns(CodexSettingsOptions.MODELS.first(), CodexSettingsOptions.REASONING_LEVELS.first())
             }
         })
         .createPanel()
@@ -74,8 +76,8 @@ class CodexSettingsConfigurable : SearchableConfigurable {
     private val projectUseWslBox = OverrideTriState()
     private val projectOpenStartupBox = OverrideTriState()
     private val projectModelCombo = OverrideCombo(appConfig.availableModels)
-    private val projectEffortCombo = OverrideCombo(CodexSettingsOptions.EFFORTS)
-    private val projectApprovalCombo = OverrideCombo(ApprovalMode.values().map { it.name })
+    private val projectReasoningCombo = OverrideCombo(CodexSettingsOptions.REASONING_LEVELS)
+    private val projectApprovalCombo = OverrideCombo(CodexSettingsOptions.APPROVAL_LEVELS.map { it.mode.name })
     private val projectSandboxCombo = OverrideCombo(CodexSettingsOptions.SANDBOX_POLICIES.map { it.id })
 
     private val testButton = JButton("Test connection")
@@ -104,8 +106,8 @@ class CodexSettingsConfigurable : SearchableConfigurable {
       if (useWslCheckbox.isSelected != appConfig.useWsl) return true
       if (openStartupCheckbox.isSelected != appConfig.openToolWindowOnStartup) return true
       if ((modelCombo.selectedItem as String?) != appConfig.defaultModel) return true
-      if ((effortCombo.selectedItem as String?) != appConfig.defaultEffort) return true
-      if (((approvalCombo.selectedItem as ApprovalMode).name) != appConfig.defaultApprovalMode) return true
+      if ((reasoningCombo.selectedItem as String?) != appConfig.defaultEffort) return true
+      if (((approvalCombo.selectedItem as CodexSettingsOptions.ApprovalLevelOption).mode.name) != appConfig.defaultApprovalMode) return true
       if ((sandboxCombo.selectedItem as CodexSettingsOptions.SandboxOption).id != appConfig.defaultSandboxPolicy) return true
 
       if (projectSettings != null) {
@@ -114,7 +116,7 @@ class CodexSettingsConfigurable : SearchableConfigurable {
         if (projectUseWslBox.value != projectSettings.useWslOverride) return true
         if (projectOpenStartupBox.value != projectSettings.openToolWindowOnStartup) return true
         if (projectModelCombo.value != projectSettings.defaultModel) return true
-        if (projectEffortCombo.value != projectSettings.defaultEffort) return true
+        if (projectReasoningCombo.value != projectSettings.defaultEffort) return true
         if (projectApprovalCombo.value != projectSettings.defaultApprovalMode) return true
         if (projectSandboxCombo.value != projectSettings.defaultSandboxPolicy) return true
       }
@@ -129,8 +131,8 @@ class CodexSettingsConfigurable : SearchableConfigurable {
       appConfig.useWsl = useWslCheckbox.isSelected
       appConfig.openToolWindowOnStartup = openStartupCheckbox.isSelected
       appConfig.defaultModel = modelCombo.selectedItem as String
-      appConfig.defaultEffort = effortCombo.selectedItem as String
-      appConfig.defaultApprovalMode = (approvalCombo.selectedItem as ApprovalMode).name
+      appConfig.defaultEffort = reasoningCombo.selectedItem as String
+      appConfig.defaultApprovalMode = (approvalCombo.selectedItem as CodexSettingsOptions.ApprovalLevelOption).mode.name
       appConfig.defaultSandboxPolicy = (sandboxCombo.selectedItem as CodexSettingsOptions.SandboxOption).id
 
       projectSettings?.let { settings ->
@@ -140,7 +142,7 @@ class CodexSettingsConfigurable : SearchableConfigurable {
         settings.useWslOverride = projectUseWslBox.value
         settings.openToolWindowOnStartup = projectOpenStartupBox.value
         settings.defaultModel = projectModelCombo.value
-        settings.defaultEffort = projectEffortCombo.value
+        settings.defaultEffort = projectReasoningCombo.value
         settings.defaultApprovalMode = projectApprovalCombo.value
         settings.defaultSandboxPolicy = projectSandboxCombo.value
       }
@@ -150,10 +152,14 @@ class CodexSettingsConfigurable : SearchableConfigurable {
       cliPathField.text = appConfig.cliPath?.toString() ?: ""
       useWslCheckbox.isSelected = appConfig.useWsl
       openStartupCheckbox.isSelected = appConfig.openToolWindowOnStartup
-      modelCombo.selectedItem = appConfig.defaultModel ?: CodexSettingsOptions.MODELS.first()
-      effortCombo.selectedItem = appConfig.defaultEffort ?: CodexSettingsOptions.EFFORTS.first()
-      approvalCombo.selectedItem = ApprovalMode.values().firstOrNull { it.name == appConfig.defaultApprovalMode }
-        ?: ApprovalMode.CHAT
+
+      setModelEntries(appConfig.availableModels, appConfig.defaultModel)
+      refreshModelDropdowns(appConfig.defaultModel ?: CodexSettingsOptions.MODELS.firstOrNull(), appConfig.defaultEffort)
+
+      val approvalOption = CodexSettingsOptions.approvalOptionFor(appConfig.defaultApprovalMode)
+        ?: CodexSettingsOptions.APPROVAL_LEVELS.first()
+      approvalCombo.selectedItem = approvalOption
+
       sandboxCombo.selectedItem = CodexSettingsOptions.SANDBOX_POLICIES.firstOrNull { it.id == appConfig.defaultSandboxPolicy }
         ?: CodexSettingsOptions.SANDBOX_POLICIES.first()
 
@@ -162,11 +168,13 @@ class CodexSettingsConfigurable : SearchableConfigurable {
         projectUseWslBox.value = settings.useWslOverride
         projectOpenStartupBox.value = settings.openToolWindowOnStartup
         projectModelCombo.value = settings.defaultModel
-        projectEffortCombo.value = settings.defaultEffort
+        projectReasoningCombo.value = settings.defaultEffort
         projectApprovalCombo.value = settings.defaultApprovalMode
         projectSandboxCombo.value = settings.defaultSandboxPolicy
       }
+      refreshReasoningOptions(appConfig.defaultEffort)
     }
+
 
 
     private fun currentModelList(): List<String> = (0 until modelsListModel.size()).map { modelsListModel.getElementAt(it) }
@@ -193,7 +201,7 @@ class CodexSettingsConfigurable : SearchableConfigurable {
         }
         modelsListModel.addElement(value)
         modelsList.selectedIndex = modelsListModel.size() - 1
-        refreshModelDropdowns(value)
+        refreshModelDropdowns(value, reasoningCombo.selectedItem as? String)
     }
 
     private fun editSelectedModel() {
@@ -207,7 +215,7 @@ class CodexSettingsConfigurable : SearchableConfigurable {
         }
         modelsListModel.setElementAt(updated, index)
         modelsList.selectedIndex = index
-        refreshModelDropdowns(updated)
+        refreshModelDropdowns(updated, reasoningCombo.selectedItem as? String)
     }
 
     private fun removeSelectedModel() {
@@ -222,7 +230,7 @@ class CodexSettingsConfigurable : SearchableConfigurable {
         if (modelsListModel.size() > 0) {
             modelsList.selectedIndex = newIndex
         }
-        refreshModelDropdowns()
+        refreshModelDropdowns(preferredReasoning = reasoningCombo.selectedItem as? String)
     }
 
     private fun promptForModel(title: String, initial: String): String? {
@@ -231,7 +239,7 @@ class CodexSettingsConfigurable : SearchableConfigurable {
         return trimmed?.takeIf { it.isNotEmpty() }
     }
 
-    private fun refreshModelDropdowns(preferredSelection: String? = null) {
+        private fun refreshModelDropdowns(preferredSelection: String? = null, preferredReasoning: String? = null) {
         val models = currentModelList()
         val previous = preferredSelection ?: (modelCombo.selectedItem as? String)
         modelComboModel.removeAllElements()
@@ -247,8 +255,34 @@ class CodexSettingsConfigurable : SearchableConfigurable {
         if (previousProject != null && models.contains(previousProject)) {
             projectModelCombo.value = previousProject
         }
+        refreshReasoningOptions(preferredReasoning)
     }
 
+    private fun refreshReasoningOptions(preferredSelection: String? = null) {
+        val selectedModel = modelCombo.selectedItem as? String
+        val allowed = CodexSettingsOptions.reasoningLevelsForModel(selectedModel)
+        val desired = preferredSelection ?: (reasoningCombo.selectedItem as? String)
+        val model = DefaultComboBoxModel(allowed.toTypedArray())
+        reasoningCombo.model = model
+        val target = when {
+            desired != null && allowed.contains(desired) -> desired
+            allowed.contains(appConfig.defaultEffort) -> appConfig.defaultEffort
+            allowed.isNotEmpty() -> allowed.first()
+            else -> null
+        }
+        if (target != null) {
+            reasoningCombo.selectedItem = target
+        } else {
+            reasoningCombo.selectedIndex = -1
+        }
+
+        val projectModelSelection = projectModelCombo.value ?: selectedModel
+        val projectAllowed = CodexSettingsOptions.reasoningLevelsForModel(projectModelSelection)
+        projectReasoningCombo.setOptions(projectAllowed)
+        if (projectReasoningCombo.value != null && !projectAllowed.contains(projectReasoningCombo.value)) {
+            projectReasoningCombo.value = null
+        }
+    }
     private fun buildUI(): JPanel {
       cliPathField.addBrowseFolderListener(
         TextBrowseFolderListener(FileChooserDescriptorFactory.createSingleLocalFileDescriptor())
@@ -271,6 +305,8 @@ class CodexSettingsConfigurable : SearchableConfigurable {
       exportButton.addActionListener { exportSettings() }
       importButton.addActionListener { importSettings() }
       resetButton.addActionListener { resetToDefaults() }
+      modelCombo.addActionListener { refreshReasoningOptions() }
+      projectModelCombo.component.addActionListener { refreshReasoningOptions() }
 
       val globalPanel = FormBuilder.createFormBuilder()
         .addLabeledComponent(JBLabel("CLI path:"), cliPathField)
@@ -278,8 +314,8 @@ class CodexSettingsConfigurable : SearchableConfigurable {
         .addComponent(openStartupCheckbox)
         .addSeparator()
         .addLabeledComponent(JBLabel("Default model:"), modelCombo)
-        .addLabeledComponent(JBLabel("Default effort:"), effortCombo)
-        .addLabeledComponent(JBLabel("Default approval mode:"), approvalCombo)
+        .addLabeledComponent(JBLabel("Default reasoning level:"), reasoningCombo)
+        .addLabeledComponent(JBLabel("Default approval level:"), approvalCombo)
         .addLabeledComponent(JBLabel("Default sandbox policy:"), sandboxCombo)
         .addComponent(buttonRow)
         .addComponent(statusLabel)
@@ -300,8 +336,8 @@ class CodexSettingsConfigurable : SearchableConfigurable {
         .addLabeledComponent(JBLabel("WSL preference:"), projectUseWslBox.component)
         .addLabeledComponent(JBLabel("Tool window on startup:"), projectOpenStartupBox.component)
         .addLabeledComponent(JBLabel("Model override:"), projectModelCombo.component)
-        .addLabeledComponent(JBLabel("Effort override:"), projectEffortCombo.component)
-        .addLabeledComponent(JBLabel("Approval override:"), projectApprovalCombo.component)
+        .addLabeledComponent(JBLabel("Reasoning override:"), projectReasoningCombo.component)
+        .addLabeledComponent(JBLabel("Approval level override:"), projectApprovalCombo.component)
         .addLabeledComponent(JBLabel("Sandbox override:"), projectSandboxCombo.component)
       return builder.panel
     }
@@ -349,8 +385,8 @@ class CodexSettingsConfigurable : SearchableConfigurable {
         addProperty("use_wsl", useWslCheckbox.isSelected)
         addProperty("open_tool_window_on_startup", openStartupCheckbox.isSelected)
         addProperty("default_model", modelCombo.selectedItem as String)
-        addProperty("default_effort", effortCombo.selectedItem as String)
-        addProperty("default_approval_mode", (approvalCombo.selectedItem as ApprovalMode).name)
+        addProperty("default_effort", reasoningCombo.selectedItem as String)
+        addProperty("default_approval_mode", (approvalCombo.selectedItem as CodexSettingsOptions.ApprovalLevelOption).mode.name)
         addProperty("default_sandbox_policy", (sandboxCombo.selectedItem as CodexSettingsOptions.SandboxOption).id)
         val modelsArray = JsonArray().apply { sanitizedModelsFromUi().forEach { add(it) } }
         add("available_models", modelsArray)
@@ -360,7 +396,7 @@ class CodexSettingsConfigurable : SearchableConfigurable {
             addProperty("use_wsl_override", projectUseWslBox.value)
             addProperty("open_tool_window_on_startup", projectOpenStartupBox.value)
             addProperty("default_model", projectModelCombo.value)
-            addProperty("default_effort", projectEffortCombo.value)
+            addProperty("default_effort", projectReasoningCombo.value)
             addProperty("default_approval_mode", projectApprovalCombo.value)
             addProperty("default_sandbox_policy", projectSandboxCombo.value)
           }
@@ -384,9 +420,10 @@ class CodexSettingsConfigurable : SearchableConfigurable {
         openStartupCheckbox.isSelected = json.get("open_tool_window_on_startup")?.asBoolean
           ?: openStartupCheckbox.isSelected
         json.get("default_model")?.asString?.let { modelCombo.selectedItem = it }
-        json.get("default_effort")?.asString?.let { effortCombo.selectedItem = it }
+        val importedReasoning = json.get("default_effort")?.asString
+        refreshReasoningOptions(importedReasoning)
         json.get("default_approval_mode")?.asString?.let { value ->
-          approvalCombo.selectedItem = ApprovalMode.values().firstOrNull { it.name == value } ?: approvalCombo.selectedItem
+          CodexSettingsOptions.approvalOptionFor(value)?.let { approvalCombo.selectedItem = it }
         }
         json.get("default_sandbox_policy")?.asString?.let { value ->
           sandboxCombo.selectedItem = CodexSettingsOptions.SANDBOX_POLICIES.firstOrNull { it.id == value }
@@ -398,14 +435,14 @@ class CodexSettingsConfigurable : SearchableConfigurable {
           }
           val models = if (imported.isEmpty()) CodexSettingsOptions.MODELS else imported
           setModelEntries(models, models.firstOrNull())
-          refreshModelDropdowns(models.firstOrNull())
+          refreshModelDropdowns(models.firstOrNull(), importedReasoning)
         }
         json.getAsJsonObject("project_override")?.let { proj ->
           projectCliField.text = proj.get("cli_path_override")?.asString ?: ""
           projectUseWslBox.value = proj.get("use_wsl_override")?.asBoolean
           projectOpenStartupBox.value = proj.get("open_tool_window_on_startup")?.asBoolean
           projectModelCombo.value = proj.get("default_model")?.asString
-          projectEffortCombo.value = proj.get("default_effort")?.asString
+          projectReasoningCombo.value = proj.get("default_effort")?.asString
           projectApprovalCombo.value = proj.get("default_approval_mode")?.asString
           projectSandboxCombo.value = proj.get("default_sandbox_policy")?.asString
         }
@@ -419,22 +456,26 @@ class CodexSettingsConfigurable : SearchableConfigurable {
     }
 
     private fun resetToDefaults() {
-      cliPathField.text = ""
-      useWslCheckbox.isSelected = false
-      openStartupCheckbox.isSelected = false
-      modelCombo.selectedIndex = 0
-      effortCombo.selectedIndex = 0
-      approvalCombo.selectedItem = ApprovalMode.CHAT
-      sandboxCombo.selectedIndex = 0
-      projectCliField.text = ""
-      projectUseWslBox.value = null
-      projectOpenStartupBox.value = null
-      projectModelCombo.value = null
-      projectEffortCombo.value = null
-      projectApprovalCombo.value = null
-      projectSandboxCombo.value = null
-      statusLabel.text = ""
-    }
+        cliPathField.text = ""
+        useWslCheckbox.isSelected = false
+        openStartupCheckbox.isSelected = false
+
+        setModelEntries(CodexSettingsOptions.MODELS, CodexSettingsOptions.MODELS.first())
+        refreshModelDropdowns(CodexSettingsOptions.MODELS.first(), CodexSettingsOptions.REASONING_LEVELS.first())
+
+        approvalCombo.selectedItem = CodexSettingsOptions.APPROVAL_LEVELS.first()
+        sandboxCombo.selectedIndex = 0
+
+        projectCliField.text = ""
+        projectUseWslBox.value = null
+        projectOpenStartupBox.value = null
+        projectModelCombo.value = null
+        projectReasoningCombo.value = null
+        projectApprovalCombo.value = null
+        projectSandboxCombo.value = null
+        statusLabel.text = ""
+      }
+
 
     private fun validateCliPath(path: Path) {
       if (!Files.exists(path)) {
@@ -459,6 +500,39 @@ class CodexSettingsConfigurable : SearchableConfigurable {
         val renderer = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
         if (value is CodexSettingsOptions.SandboxOption) {
           text = value.label
+        }
+        return renderer
+      }
+    }
+
+    private fun approvalRenderer(): javax.swing.DefaultListCellRenderer = object : javax.swing.DefaultListCellRenderer() {
+      override fun getListCellRendererComponent(
+        list: javax.swing.JList<*>,
+        value: Any?,
+        index: Int,
+        isSelected: Boolean,
+        cellHasFocus: Boolean
+      ): java.awt.Component {
+        val renderer = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
+        if (value is CodexSettingsOptions.ApprovalLevelOption) {
+          text = value.label
+        }
+        return renderer
+      }
+    }
+
+    private fun approvalOverrideRenderer(): javax.swing.DefaultListCellRenderer = object : javax.swing.DefaultListCellRenderer() {
+      override fun getListCellRendererComponent(
+        list: javax.swing.JList<*>,
+        value: Any?,
+        index: Int,
+        isSelected: Boolean,
+        cellHasFocus: Boolean
+      ): java.awt.Component {
+        val renderer = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus)
+        val textValue = value as? String
+        if (textValue != null && !textValue.equals("Use global", ignoreCase = true)) {
+          text = CodexSettingsOptions.approvalOptionFor(textValue)?.label ?: textValue
         }
         return renderer
       }
@@ -534,4 +608,23 @@ class CodexSettingsConfigurable : SearchableConfigurable {
       }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
