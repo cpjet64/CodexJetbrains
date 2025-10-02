@@ -1,58 +1,11 @@
 <idea-plugin>
-  <id>dev.curt.codexjb</id>
-  <name>Codex (Unofficial)</name>
-  <vendor
-      email="support@codexjb.dev"
-      url="https://github.com/cpjet64/CodexJetbrains">
-    Codex (Unofficial) Maintainers
-  </vendor>
-  <description><![CDATA[
-    <p>Codex (Unofficial) connects the Codex CLI to IntelliJ-based IDEs,</p>
-    <p>keeping AI-assisted edits in context.</p>
-    <ul>
-      <li>Launch and supervise a dedicated Codex CLI session from a tool window.</li>
-      <li>Review diffs, approvals, and telemetry without leaving the editor.</li>
-      <li>Stream ANSI-colored command output with clear and copy controls.</li>
-    </ul>
-    <p>Requires the Codex CLI to be installed locally and available on the PATH.</p>
-  ]]></description>
+  <id>dev.curt.codex</id>
+  <name>CodexJetbrains</name>
+  <vendor url="https://github.com/cpjet64">Curt</vendor>
+
+  <!-- Target 2024.2+ (JBR 21); adjust if you bump the Gradle baseline -->
+  <idea-version since-build="242"/>
+
+  <!-- Platform-level API only; add com.intellij.modules.java if you MUST -->
   <depends>com.intellij.modules.platform</depends>
-  <depends optional="true">Git4Idea</depends>
-  <extensions defaultExtensionNs="com.intellij">
-    <applicationConfigurable
-      instance="dev.curt.codexjb.ui.settings.CodexSettingsConfigurable"
-      id="dev.curt.codexjb.settings"
-      displayName="Codex (Unofficial)"/>
-    <toolWindow id="Codex" stripeTitle="Codex (Unofficial)" anchor="right"
-      factoryClass="dev.curt.codexjb.ui.CodexToolWindowFactory"/>
-    <applicationService
-      serviceImplementation="dev.curt.codexjb.core.CodexProcessService"/>
-    <projectManagerListener
-      implementation="dev.curt.codexjb.core.CodexProjectCloseListener"/>
-    <statusBarWidgetFactory
-      id="codex.session.status"
-      implementation="dev.curt.codexjb.ui.CodexStatusBarFactory"/>
-  </extensions>
-  <actions>
-    <action id="dev.curt.codexjb.actions.AskCodex"
-      class="dev.curt.codexjb.actions.AskCodexAction"
-      text="Ask Codex" description="Send selection to Codex">
-      <add-to-group group-id="EditorPopupMenu" anchor="last"/>
-      <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt C"/>
-    </action>
-    <action id="dev.curt.codexjb.actions.CodexDiagnostics"
-      class="dev.curt.codexjb.actions.CodexDiagnosticsAction"
-      text="Codex (Unofficial): Diagnostics" description="Show Codex diagnostics">
-      <add-to-group group-id="ToolsMenu" anchor="last"/>
-    </action>
-    <action id="dev.curt.codexjb.actions.CodexReportIssue"
-      class="dev.curt.codexjb.actions.CodexReportIssueAction"
-      text="Codex (Unofficial): Report Issue" description="Copy diagnostics snapshot for issue reports">
-      <add-to-group group-id="ToolsMenu" anchor="last"/>
-    </action>
-  </actions>
 </idea-plugin>
-
-
-
-

@@ -1,22 +1,25 @@
-# Repository Guidelines
+# Development & Automation Guide
 
-## Project Structure & Module Organization
-The IntelliJ plugin lives under `src/main/kotlin`, organized by feature packages (service, ui, tooling). Resources such as plugin descriptors and UI assets belong in `src/main/resources`. Gradle build logic is defined in `build.gradle.kts`, while `settings.gradle.kts` manages project metadata. Use `TODO_JetBrains.md` to track task status and `KICKOFF_JB.txt` for high-level context.
+## Prereqs
+- **JDK 21** installed. Ensure `java -version` reports 21 and set `JAVA_HOME` accordingly.
+- Gradle Wrapper is checked in; use `./gradlew` (do not install Gradle system-wide).
 
-## Build, Test, and Development Commands
-- `./gradlew buildPlugin` — compiles sources, runs tests, and produces the distributable ZIP in `build/distributions`.
-- `./gradlew test` — executes unit and integration tests; run before committing code.
-- `./gradlew runIde` — launches a sandbox IDE for manual plugin verification.
-Ensure `JAVA_HOME` points to JDK 17 before running any command.
+## Common Commands
+- `./gradlew clean build` — compile, test, assemble the plugin.
+- `./gradlew runIde` — launch a sandbox IDE with the plugin installed.
+- `./gradlew buildPlugin` — produce the ZIP at `build/distributions/`.
+- `./gradlew printProductsReleases` — list valid IDE product baselines.
+- `./gradlew printBundledPlugins` — list bundled plugin IDs for the selected baseline.
 
-## Coding Style & Naming Conventions
-Write Kotlin with 4-space indentation and prefer expressive, single-purpose functions under 40 lines. Follow JetBrains’ Kotlin style: upper camel case for classes, lower camel case for methods and variables, and snake case for constants. Keep files under 300 lines and wrap lines at 100 characters. Use comments sparingly—only to clarify non-obvious intent.
+## JDK & Toolchains (we target 21)
+The build enforces **JDK 21** via Gradle **and** Kotlin toolchains; Kotlin bytecode is compiled with `-jvm-target=21`. IDE runtime JBR is tied to the target IDE version (e.g., 2024.2+ runs on JBR 21).
 
-## Testing Guidelines
-Place tests in `src/test/kotlin`, mirroring the production package hierarchy. Name test classes with the `*Test` suffix and individual tests using descriptive `fun` names (backtick syntax allowed for readability). Target meaningful coverage of CLI process management, ToolWindow flows, and protocol handling. Run `./gradlew test` locally; add focused integration tests when introducing new UI or IPC features.
+## Target IDEs
+- **Platform-only** (widest coverage) if we *don’t* depend on `com.intellij.java`.
+- If `com.intellij.java` is enabled, the plugin targets IntelliJ IDEA–based IDEs.
 
-## Commit & Pull Request Guidelines
-Commit after each completed subtask listed in `TODO_JetBrains.md`. Follow the required message pattern: `[T<task>.<sub>] <short>; post-test=<pass>; compare=<summary>`. Include the post-test command output summary in `<summary>`, or `N/A` if not applicable. Pull requests should enumerate completed subtasks, note remaining risks, attach screenshots or recordings for UI changes, and reference related issues or discussions.
+### Toggle Java dependency at build time
+Set `ORG_GRADLE_PROJECT_codex_withJava=true|false` to include/exclude the `com.intellij.java` dependency.
 
-## Security & Configuration Tips
-Never hardcode credentials or tokens; rely on the Codex CLI for authentication. Validate paths and user input before invoking external processes. Document any new environment variables or configuration knobs in `README.md` and mirror them in future settings UI work.
+## CI Notes
+Use the Gradle Wrapper; do not rely on system JDK selection. Cache `.gradle` and Gradle User Home as appropriate.
