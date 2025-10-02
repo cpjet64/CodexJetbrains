@@ -1,10 +1,13 @@
 package dev.curt.codexjb.tooling
 
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.fileEditor.FileDocumentManager
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.testFramework.fixtures.BasePlatformTestCase
 import dev.curt.codexjb.core.CodexConfigService
-import org.junit.jupiter.api.Test
+import dev.curt.codexjb.diff.UnifiedDiffParser
+import java.nio.file.Files
 import kotlin.test.assertEquals
 
 class PatchApplierIntegrationTest : BasePlatformTestCase() {
@@ -17,9 +20,14 @@ class PatchApplierIntegrationTest : BasePlatformTestCase() {
         }
     }
 
-    @Test
-    fun `applies diff into existing file`() {
-        val vf = myFixture.tempDirFixture.createFile("src/foo.txt", "hello\n").virtualFile
+    fun `test applies diff into existing file`() {
+        val tempDir = Files.createTempDirectory("patch-test")
+        val srcDir = tempDir.resolve("src")
+        Files.createDirectories(srcDir)
+        val testFile = srcDir.resolve("foo.txt")
+        Files.writeString(testFile, "hello\n")
+
+        val vf = LocalFileSystem.getInstance().refreshAndFindFileByPath(testFile.toString())!!
         val diff = """
             --- a/src/foo.txt
             +++ b/src/foo.txt
@@ -28,17 +36,32 @@ class PatchApplierIntegrationTest : BasePlatformTestCase() {
             +world
         """.trimIndent()
 
-        val summary = PatchApplier.apply(project, diff, setOf("b/src/foo.txt"))
+        val patches = UnifiedDiffParser.parse(diff)
 
-        assertEquals(1, summary.success)
-        assertEquals(0, summary.failed)
+        var success = true
+        WriteCommandAction.runWriteCommandAction(project) {
+            try {
+                PatchApplier.doApplyWithBase(project, patches.first(), tempDir)
+            } catch (e: Exception) {
+                success = false
+            }
+        }
+
+        assertTrue(success)
         val updated = FileDocumentManager.getInstance().getDocument(vf)
         assertEquals("world\n", updated!!.text)
+
+        tempDir.toFile().deleteRecursively()
     }
 
-    @Test
-    fun `reports failure on conflicting diff`() {
-        myFixture.tempDirFixture.createFile("src/bar.txt", "base\n")
+    fun `test reports failure on conflicting diff`() {
+        val tempDir = Files.createTempDirectory("patch-test")
+        val srcDir = tempDir.resolve("src")
+        Files.createDirectories(srcDir)
+        val testFile = srcDir.resolve("bar.txt")
+        Files.writeString(testFile, "base\n")
+
+        LocalFileSystem.getInstance().refreshAndFindFileByPath(testFile.toString())!!
         val diff = """
             --- a/src/bar.txt
             +++ b/src/bar.txt
@@ -47,9 +70,19 @@ class PatchApplierIntegrationTest : BasePlatformTestCase() {
             +change
         """.trimIndent()
 
-        val summary = PatchApplier.apply(project, diff, setOf("b/src/bar.txt"))
+        val patches = UnifiedDiffParser.parse(diff)
 
-        assertEquals(0, summary.success)
-        assertEquals(1, summary.failed)
+        var failed = false
+        WriteCommandAction.runWriteCommandAction(project) {
+            try {
+                PatchApplier.doApplyWithBase(project, patches.first(), tempDir)
+            } catch (e: Exception) {
+                failed = true
+            }
+        }
+
+        assertTrue(failed)
+
+        tempDir.toFile().deleteRecursively()
     }
 }

@@ -29,13 +29,13 @@ class DiagnosticsServiceTest {
 
     @Test
     fun `append redacts sensitive token values`() {
-        val sensitiveLine = "Received bearer sk-testsecretvalue"
+        val sensitiveLine = "Received bearer sk-testsecretvalue123"
 
         DiagnosticsService.append(sensitiveLine)
 
         val snapshot = DiagnosticsService.snapshot()
         val last = snapshot.last()
         assertTrue(last.contains("[REDACTED]"), "Expected redacted marker in diagnostics line")
-        assertFalse(last.contains("sk-testsecretvalue"), "Sensitive token should not appear in diagnostics")
+        assertFalse(last.contains("sk-testsecretvalue123"), "Sensitive token should not appear in diagnostics")
     }
 }

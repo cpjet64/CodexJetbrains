@@ -376,15 +376,15 @@ out/
 fix1.txt
 cli-output.txt
 stacktrace.txt
-todo-final.md
-sourceoftruth.md
-todo-source.md
-ubuntu-todo.md
 
 # Ignore Windows device filename accidentally created
 CON
 
-
 # IntelliJ Platform Gradle plugin cache
 .intellijPlatform/
 
+# Archived documentation (kept for reference)
+archive/
+/CLAUDE.md
+/.claude/settings.local.json
+/openai.chatgpt-0.4.15.vsix

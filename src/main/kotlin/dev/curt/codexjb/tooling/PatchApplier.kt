@@ -67,17 +67,21 @@ object PatchApplier {
 
     private fun doApply(project: Project, patch: FilePatch) {
         val base = project.basePath ?: throw IllegalStateException("No project basePath")
+        doApplyWithBase(project, patch, Path.of(base))
+    }
+
+    internal fun doApplyWithBase(project: Project, patch: FilePatch, basePath: Path) {
         val targetRel = stripPrefix(patch.newPath)
         val oldRel = stripPrefix(patch.oldPath)
 
         if (patch.newPath == "/dev/null") {
             // deletion
-            val vf = findVirtualFile(Path.of(base, oldRel)) ?: return
+            val vf = findVirtualFile(basePath.resolve(oldRel)) ?: return
             vf.delete(this)
             return
         }
 
-        val target = Path.of(base, targetRel)
+        val target = basePath.resolve(targetRel)
         val vf = findOrCreateVirtualFile(target)
         val doc = FileDocumentManager.getInstance().getDocument(vf)
             ?: throw IllegalStateException("No document for ${vf.path}")
@@ -99,12 +103,21 @@ object PatchApplier {
         val ioFile = path.toFile()
         val parent = ioFile.parentFile
         val vParent = VfsUtil.createDirectories(parent.absolutePath)
-        return vParent.findChild(ioFile.name) ?: vParent.createChildData(this, ioFile.name)
+        val result = vParent.findChild(ioFile.name) ?: vParent.createChildData(this, ioFile.name)
+        vParent.refresh(false, false) // Refresh to ensure VFS consistency
+        return result
     }
 
     private fun stripPrefix(p: String): String {
         val s = p.removePrefix("a/").removePrefix("b/")
-        return if (s.startsWith("./")) s.substring(2) else s
+        val cleaned = if (s.startsWith("./")) s.substring(2) else s
+
+        // Reject paths with traversal attempts to prevent path traversal attacks
+        if (cleaned.contains("..")) {
+            throw IllegalStateException("Path traversal not allowed: $p")
+        }
+
+        return cleaned.replace("\\", "/") // Normalize path separators
     }
 
     // Logic moved to PatchEngine for testability

@@ -39,9 +39,29 @@ private class RealCodexProcess(
     override fun isAlive(): Boolean = process.isAlive
 
     override fun destroy() {
-        kotlin.runCatching { writer.flush() }
-        kotlin.runCatching { writer.close() }
-        process.destroy()
+        // 1. Flush and close stdin (signals no more input)
+        kotlin.runCatching {
+            writer.flush()
+            writer.close()
+        }
+
+        // 2. Wait briefly for graceful exit (2 seconds)
+        val exited = kotlin.runCatching {
+            process.waitFor(2, java.util.concurrent.TimeUnit.SECONDS)
+        }.getOrDefault(false)
+
+        // 3. Normal terminate if still alive
+        if (!exited && process.isAlive) {
+            process.destroy()
+        }
+
+        // 4. Last resort: force kill (kills process tree on most platforms)
+        kotlin.runCatching {
+            if (!process.waitFor(3, java.util.concurrent.TimeUnit.SECONDS)) {
+                process.destroyForcibly()
+                process.waitFor()  // Wait indefinitely for forceful kill
+            }
+        }
     }
 }
 

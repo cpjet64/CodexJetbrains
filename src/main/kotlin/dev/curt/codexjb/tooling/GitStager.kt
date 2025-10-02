@@ -15,23 +15,47 @@ object GitStager {
         if (absolutePaths.isEmpty()) return
         try {
             // Simple git add implementation without git4idea dependency
-            val processBuilder = ProcessBuilder("git", "add")
             val basePath = project.basePath
             if (basePath == null) {
                 log.warn("git stage skipped: project has no base path")
                 return
             }
-            processBuilder.directory(File(basePath))
-            absolutePaths.forEach { processBuilder.command().add(it) }
-            
+
+            val baseFile = File(basePath).canonicalFile
+
+            // Validate paths are within project directory to prevent command injection
+            val validatedPaths = absolutePaths.mapNotNull { path ->
+                try {
+                    val file = File(path).canonicalFile
+                    if (file.startsWith(baseFile)) {
+                        path
+                    } else {
+                        log.warn("Rejecting path outside project: $path")
+                        null
+                    }
+                } catch (e: Exception) {
+                    log.warn("Invalid path rejected: $path - ${e.message}")
+                    null
+                }
+            }
+
+            if (validatedPaths.isEmpty()) {
+                log.warn("No valid paths to stage")
+                return
+            }
+
+            val processBuilder = ProcessBuilder("git", "add")
+            processBuilder.directory(baseFile)
+            validatedPaths.forEach { processBuilder.command().add(it) }
+
             val process = processBuilder.start()
             val exitCode = process.waitFor()
-            
+
             if (exitCode != 0) {
                 val error = process.errorStream.bufferedReader().readText()
                 log.warn("git add failed: $error")
             } else {
-                log.info("Successfully staged ${absolutePaths.size} files")
+                log.info("Successfully staged ${validatedPaths.size} files")
             }
         } catch (t: Throwable) {
             log.warn("git stage skipped: ${t.message}")

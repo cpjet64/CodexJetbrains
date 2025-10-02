@@ -59,7 +59,9 @@ class CodexPathDiscoveryTest {
         val cmd = tmp.resolve("codex.cmd")
         Files.writeString(cmd, "@echo off\necho codex\n")
 
-        val env = mapOf("Path" to tmp.toString())
+        // Include Windows system directory with cmd.exe in PATH
+        val systemPath = "C:\\Windows\\System32"
+        val env = mapOf("Path" to "$tmp;$systemPath")
         val found = CodexPathDiscovery.discover(
             os = OperatingSystem.WINDOWS,
             env = env,

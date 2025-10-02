@@ -10,7 +10,7 @@ class SessionStateTest {
     fun updatesOnSessionConfigured() {
         val s = SessionState()
         val msg = JsonObject().apply {
-            addProperty("type", "SessionConfigured")
+            addProperty("type", "session_configured")
             addProperty("model", "gpt-4.1-mini")
             addProperty("effort", "medium")
             addProperty("rollout_path", "/v1")
@@ -26,7 +26,7 @@ class SessionStateTest {
         val log = RecLog()
         val s = SessionState(log)
         val msg = JsonObject().apply {
-            addProperty("type", "SessionConfigured")
+            addProperty("type", "session_configured")
             addProperty("rollout_path", "/v2")
         }
         s.onEvent("t1", msg)

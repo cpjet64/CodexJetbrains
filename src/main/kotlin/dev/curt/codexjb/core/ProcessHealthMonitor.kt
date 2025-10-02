@@ -16,7 +16,7 @@ class ProcessHealthMonitor(
     private val scheduler: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor {
         Thread(it, "codex-process-health").apply { isDaemon = true }
     }
-    private var restartedForStale = false
+    @Volatile private var restartedForStale = false
 
     fun start() {
         scheduler.scheduleWithFixedDelay(::check, checkIntervalMs, checkIntervalMs, TimeUnit.MILLISECONDS)

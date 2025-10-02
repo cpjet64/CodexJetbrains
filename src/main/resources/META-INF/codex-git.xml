@@ -1,0 +1,4 @@
+<idea-plugin>
+  <!-- Git4Idea optional dependency configuration -->
+  <!-- This file is loaded only when Git4Idea plugin is available -->
+</idea-plugin>

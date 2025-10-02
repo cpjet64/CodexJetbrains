@@ -14,7 +14,7 @@ class SessionState(private val log: LogSink? = null) {
 
     fun onEvent(id: String, msg: JsonObject) {
         val type = msg.get("type")?.asString ?: return
-        if (type != "SessionConfigured") return
+        if (type != "session_configured") return
         
         // Record session start with session ID
         TelemetryService.recordSessionStart(id)

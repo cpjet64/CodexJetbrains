@@ -2,32 +2,33 @@ package dev.curt.codexjb.core
 
 import dev.curt.codexjb.core.LogSink
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.ConcurrentHashMap
 
 object TelemetryService {
     private val log: LogSink = CodexLogger.forClass(TelemetryService::class.java)
-    
+
     // Patch apply counters
     private val patchApplySuccess = AtomicLong(0)
     private val patchApplyFailure = AtomicLong(0)
     private val patchApplyTotal = AtomicLong(0)
-    
+
     // Exec command counters
     private val execCommandSuccess = AtomicLong(0)
     private val execCommandFailure = AtomicLong(0)
     private val execCommandTotal = AtomicLong(0)
-    
+
     // MCP tool counters
     private val mcpToolInvocations = AtomicLong(0)
     private val mcpToolFailures = AtomicLong(0)
-    
+
     // Session counters
     private val sessionStarts = AtomicLong(0)
     private val sessionEnds = AtomicLong(0)
     private val sessionErrors = AtomicLong(0)
-    
-    // Session-based tool invocations
-    private val toolInvocationsPerSession = mutableMapOf<String, AtomicLong>()
-    private var currentSessionId: String? = null
+
+    // Session-based tool invocations (thread-safe)
+    private val toolInvocationsPerSession = ConcurrentHashMap<String, AtomicLong>()
+    @Volatile private var currentSessionId: String? = null
     
     fun recordPatchApplySuccess() {
         patchApplySuccess.incrementAndGet()
@@ -70,11 +71,11 @@ object TelemetryService {
     
     fun recordSessionStart(sessionId: String? = null) {
         sessionStarts.incrementAndGet()
-        currentSessionId = sessionId ?: "session_${System.currentTimeMillis()}"
-        val id = currentSessionId!!
+        val id = sessionId ?: "session_${System.currentTimeMillis()}"
+        currentSessionId = id
         val counter = toolInvocationsPerSession.computeIfAbsent(id) { AtomicLong(0) }
         counter.set(0)
-        log.info("Session start: ${sessionStarts.get()} (id: $currentSessionId)")
+        log.info("Session start: ${sessionStarts.get()} (id: $id)")
     }
     
     fun recordSessionEnd() {

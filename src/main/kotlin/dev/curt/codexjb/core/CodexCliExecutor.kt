@@ -52,6 +52,9 @@ class DefaultCodexCliExecutor : CodexCliExecutor {
             val stderr = process.errorStream.reader(StandardCharsets.UTF_8).use { it.readText() }
             val exitCode = process.waitFor()
             CodexCliResult(exitCode, stdout, stderr)
+        } catch (ex: InterruptedException) {
+            Thread.currentThread().interrupt()
+            CodexCliResult(-1, "", "Process interrupted: ${ex.message}")
         } catch (ex: IOException) {
             CodexCliResult(-1, "", ex.message ?: ex.javaClass.simpleName)
         }

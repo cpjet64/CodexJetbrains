@@ -12,9 +12,10 @@ class EnvelopesTest {
         val body = JsonObject().apply { addProperty("text", "hi") }
         val env = SubmissionEnvelope("abc", "Submit", body)
         val s = EnvelopeJson.encodeSubmission(env)
-        // basic shape
+        // Combined format: {"id": "abc", "op": "Submit", "Submit": {"text": "hi"}}
         assertEquals(true, s.contains("\"id\":\"abc\""))
         assertEquals(true, s.contains("\"op\":\"Submit\""))
+        assertEquals(true, s.contains("\"Submit\":{"))
         assertEquals(true, s.contains("\"text\":\"hi\""))
     }
 

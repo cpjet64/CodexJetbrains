@@ -1,10 +1,12 @@
 package dev.curt.codexjb.ui
 
+import com.intellij.openapi.editor.colors.EditorColorsManager
+import com.intellij.ui.components.JBScrollPane
 import dev.curt.codexjb.core.DiagnosticsService
 import java.awt.BorderLayout
+import java.awt.Font
 import javax.swing.JButton
 import javax.swing.JPanel
-import javax.swing.JScrollPane
 import javax.swing.JTextArea
 import javax.swing.SwingUtilities
 
@@ -16,7 +18,16 @@ class DiagnosticsPanel : JPanel(BorderLayout()) {
 
     init {
         textArea.isEditable = false
-        add(JScrollPane(textArea), BorderLayout.CENTER)
+
+        // Use IntelliJ's editor font for proper Unicode support and consistency
+        val editorFont = EditorColorsManager.getInstance().globalScheme.getFont(com.intellij.openapi.editor.colors.EditorFontType.PLAIN)
+        textArea.font = Font(editorFont.family, Font.PLAIN, editorFont.size)
+
+        // Ensure proper line wrapping for long lines
+        textArea.lineWrap = true
+        textArea.wrapStyleWord = false // Don't break in middle of words for paths
+
+        add(JBScrollPane(textArea), BorderLayout.CENTER)
 
         val buttons = JPanel().apply {
             add(copyButton)

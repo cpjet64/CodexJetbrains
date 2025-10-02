@@ -32,10 +32,17 @@ object DiagnosticsService {
     }
 
     fun append(rawLine: String) {
-        val normalized = rawLine.removeSuffix("\n").removeSuffix("\r")
+        // Remove line endings and clean up encoding issues
+        val normalized = rawLine
+            .removeSuffix("\n")
+            .removeSuffix("\r")
+            .replace("\uFEFF", "") // Remove BOM if present
+            .replace("\u0000", "") // Remove null characters
+
         val redacted = SensitiveDataRedactor.redact(normalized)
+        val formatted = formatMessage(redacted)
         val timestamp = timestampFormatter.format(Instant.now().atZone(ZoneId.systemDefault()))
-        val stamped = "$timestamp | $redacted"
+        val stamped = "$timestamp | $formatted"
         lock.withLock {
             lines.addLast(stamped)
             while (lines.size > MAX_LINES) {
@@ -44,6 +51,72 @@ object DiagnosticsService {
             writeToFile(stamped)
         }
         notifyListeners()
+    }
+
+    private fun formatMessage(message: String): String {
+        // Extract Rust log level and clean up verbose logging
+        val rustLogPattern = """^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z\s+(\w+)\s+(\S+):\s*(.*)$""".toRegex()
+        val match = rustLogPattern.matchEntire(message)
+
+        if (match != null) {
+            val (level, module, content) = match.destructured
+
+            // Simplify MCP server messages
+            if (module.contains("mcp_connection_manager")) {
+                when {
+                    content.contains("new mcp_servers:") -> return "[$level] Initializing MCP servers..."
+                    content.contains("new_stdio_client") -> {
+                        val programMatch = """program:\s*"([^"]+)"""".toRegex().find(content)
+                        val program = programMatch?.groupValues?.get(1)?.substringAfterLast('/')?.substringAfterLast('\\') ?: "unknown"
+                        return "[$level] Starting MCP client: $program"
+                    }
+                    content.contains("aggregated") -> return "[$level] ${content.substringAfter("aggregated").trim()}"
+                }
+            }
+
+            // Simplify codex_core messages
+            if (module.contains("codex_core")) {
+                when {
+                    content.contains("MCP client for") -> {
+                        val serverMatch = """MCP client for `([^`]+)`""".toRegex().find(content)
+                        val server = serverMatch?.groupValues?.get(1) ?: "unknown"
+                        val reason = content.substringAfter(": ").trim()
+                        return "[$level] MCP server '$server': $reason"
+                    }
+                    content.contains("cwd not set") -> return "[$level] Using current directory as working directory"
+                }
+            }
+
+            // Simplify codex_cli::proto messages
+            if (module.contains("codex_cli::proto")) {
+                when {
+                    content.contains("invalid submission") -> {
+                        val reason = content.substringAfter("invalid submission: ").trim()
+                        return "[$level] Protocol error: $reason"
+                    }
+                    content.contains("Submission queue closed") -> return "[$level] Submission queue closed (shutdown)"
+                }
+            }
+
+            // Format general Rust logs more concisely
+            return "[$level] ${module.substringAfterLast("::")}: $content"
+        }
+
+        // Highlight key plugin events
+        return when {
+            message.contains("initialized successfully", ignoreCase = true) -> "✓ $message"
+            message.startsWith("ERROR:") -> "✗ $message"
+            message.startsWith("DEBUG:") -> "• ${message.removePrefix("DEBUG: ")}"
+            message.contains("Resolved Codex CLI:") -> {
+                val path = message.substringAfter("Resolved Codex CLI: ").substringBefore(" |")
+                "✓ Found Codex CLI: $path"
+            }
+            message.contains("Starting Codex CLI with shell:") -> {
+                val shell = message.substringAfter("Starting Codex CLI with shell: ").trim()
+                "→ Shell: $shell"
+            }
+            else -> message
+        }
     }
 
     fun snapshot(): List<String> = lock.withLock { lines.toList() }

@@ -17,10 +17,12 @@ data class EventEnvelope(
 
 object EnvelopeJson {
     fun encodeSubmission(env: SubmissionEnvelope): String {
+        // Format: {"id":"...", "op":"Submit", "Submit":{...}}
+        // The CLI expects both the op field AND the internally tagged enum
         val root = JsonObject()
         root.addProperty("id", env.id)
         root.addProperty("op", env.op)
-        root.add("body", env.body)
+        root.add(env.op, env.body)
         return root.toString()
     }
 

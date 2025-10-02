@@ -16,6 +16,7 @@ import dev.curt.codexjb.proto.*
 import java.awt.BorderLayout
 import java.awt.Component
 import java.nio.file.Path
+import kotlin.io.path.exists
 import javax.swing.DefaultComboBoxModel
 import javax.swing.DefaultListCellRenderer
 import javax.swing.JCheckBox
@@ -31,17 +32,210 @@ class CodexToolWindowFactory : ToolWindowFactory {
     val bus = EventBus()
     val turns = TurnRegistry()
     val cfg = ApplicationManager.getApplication().getService(CodexConfigService::class.java)
-    val proc = ApplicationManager.getApplication().getService(CodexProcessService::class.java)
+    val proc = project.getService(CodexProcessService::class.java)
     val log = CodexLogger.forClass(CodexToolWindowFactory::class.java)
     val sessionState = SessionState(log)
-    bus.addListener("SessionConfigured") { id, msg -> sessionState.onEvent(id, msg) }
+    bus.addListener("session_configured") { id, msg -> sessionState.onEvent(id, msg) }
+
+    // Create diagnostics panel FIRST so it's always available
+    val contentFactory = ContentFactory.getInstance()
+    val diagnosticsPanel = DiagnosticsPanel()
+    val diagnosticsContent = contentFactory.createContent(diagnosticsPanel, "Diagnostics", false)
+    diagnosticsContent.setDisposer(Disposable { diagnosticsPanel.dispose() })
+    toolWindow.contentManager.addContent(diagnosticsContent)
 
     val effectiveSettings = cfg.effectiveSettings(project)
+
+    // Log all environment variables for debugging
+    DiagnosticsService.append("=== Environment Variables ===")
+    val env = System.getenv()
+
+    // Log PATH/Path - full value first, then broken down
+    val pathKey = when (EnvironmentInfo.os) {
+      OperatingSystem.WINDOWS -> "Path"
+      else -> "PATH"
+    }
+    val pathVar = env[pathKey] ?: env["PATH"] ?: env["Path"]
+    if (pathVar != null) {
+      DiagnosticsService.append("$pathKey=$pathVar")
+      DiagnosticsService.append("$pathKey (broken down):")
+      val sep = if (EnvironmentInfo.os == OperatingSystem.WINDOWS) ';' else ':'
+      pathVar.split(sep).forEachIndexed { idx, dir ->
+        DiagnosticsService.append("  [$idx] $dir")
+      }
+    } else {
+      DiagnosticsService.append("WARNING: No PATH variable found")
+    }
+
+    // Log PATHEXT on Windows - full value first, then broken down
+    if (EnvironmentInfo.os == OperatingSystem.WINDOWS) {
+      val pathExt = env["PATHEXT"]
+      if (pathExt != null) {
+        DiagnosticsService.append("PATHEXT=$pathExt")
+        DiagnosticsService.append("PATHEXT (broken down):")
+        pathExt.split(';').forEachIndexed { idx, ext ->
+          DiagnosticsService.append("  [$idx] $ext")
+        }
+      } else {
+        DiagnosticsService.append("WARNING: No PATHEXT variable found")
+      }
+    }
+
+    // Log critical OS-specific environment variables
+    when (EnvironmentInfo.os) {
+      OperatingSystem.WINDOWS -> {
+        DiagnosticsService.append("Windows System Environment Variables:")
+
+        val systemVars = listOf(
+          "APPDATA", "COMSPEC", "HOMEDRIVE", "HOMEPATH", "LOCALAPPDATA",
+          "POWERSHELL", "PROGRAMDATA", "PROGRAMFILES", "PWSH",
+          "SYSTEMDRIVE", "SYSTEMROOT", "TEMP", "TMP", "USERPROFILE"
+        )
+
+        systemVars.forEach { key ->
+          val value = env[key]
+          if (value != null) {
+            DiagnosticsService.append("  $key=$value")
+          } else {
+            DiagnosticsService.append("  $key=(not set)")
+          }
+        }
+
+        DiagnosticsService.append("Windows Development Environment Variables:")
+
+        val msvcVars = listOf(
+          // Compiler/toolchain paths
+          "INCLUDE", "LIB", "LIBPATH",
+          // Visual Studio installation context
+          "VSINSTALLDIR", "VCINSTALLDIR", "VCToolsInstallDir", "VCToolsVersion", "VCToolsRedistDir",
+          "VisualStudioVersion", "VS170COMNTOOLS", "DevEnvDir", "VCIDEInstallDir",
+          // Windows SDK context
+          "WindowsSdkDir", "WindowsSDKVersion", "WindowsSDKLibVersion",
+          "WindowsSdkBinPath", "WindowsSdkVerBinPath", "WindowsLibPath",
+          "UCRTVersion", "UniversalCRTSdkDir", "ExtensionSdkDir",
+          // .NET references
+          "FrameworkDir", "FrameworkDir64", "FrameworkVersion", "FrameworkVersion64"
+        )
+
+        msvcVars.forEach { key ->
+          val value = env[key]
+          if (value != null) {
+            DiagnosticsService.append("  $key=$value")
+          } else {
+            DiagnosticsService.append("  $key=(not set)")
+          }
+        }
+
+        // Log VSCMD_ prefixed variables
+        val vscmdVars = env.keys.filter { it.startsWith("VSCMD_") }.sorted()
+        if (vscmdVars.isNotEmpty()) {
+          DiagnosticsService.append("Developer PowerShell/Command Prompt variables:")
+          vscmdVars.forEach { key ->
+            DiagnosticsService.append("  $key=${env[key]}")
+          }
+        }
+      }
+
+      OperatingSystem.MAC -> {
+        DiagnosticsService.append("macOS System Environment Variables:")
+
+        val systemVars = listOf(
+          "HOME", "USER", "LOGNAME", "SHELL", "TMPDIR", "TERM",
+          "LANG", "LC_ALL", "LC_CTYPE"
+        )
+
+        systemVars.forEach { key ->
+          val value = env[key]
+          if (value != null) {
+            DiagnosticsService.append("  $key=$value")
+          } else {
+            DiagnosticsService.append("  $key=(not set)")
+          }
+        }
+
+        DiagnosticsService.append("macOS Development Environment Variables:")
+
+        val devVars = listOf(
+          // Xcode/Apple development tools
+          "DEVELOPER_DIR", "SDKROOT", "XCODE_VERSION",
+          // Homebrew
+          "HOMEBREW_PREFIX", "HOMEBREW_CELLAR", "HOMEBREW_REPOSITORY",
+          // Package managers
+          "PKG_CONFIG_PATH", "CPATH", "LIBRARY_PATH",
+          // Compilers
+          "CC", "CXX", "CFLAGS", "CXXFLAGS", "LDFLAGS"
+        )
+
+        devVars.forEach { key ->
+          val value = env[key]
+          if (value != null) {
+            DiagnosticsService.append("  $key=$value")
+          } else {
+            DiagnosticsService.append("  $key=(not set)")
+          }
+        }
+      }
+
+      OperatingSystem.LINUX -> {
+        DiagnosticsService.append("Linux System Environment Variables:")
+
+        val systemVars = listOf(
+          "HOME", "USER", "LOGNAME", "SHELL", "TERM",
+          "LANG", "LC_ALL", "LC_CTYPE", "DISPLAY", "WAYLAND_DISPLAY",
+          "XDG_CONFIG_HOME", "XDG_DATA_HOME", "XDG_CACHE_HOME",
+          "XDG_RUNTIME_DIR", "XDG_SESSION_TYPE"
+        )
+
+        systemVars.forEach { key ->
+          val value = env[key]
+          if (value != null) {
+            DiagnosticsService.append("  $key=$value")
+          } else {
+            DiagnosticsService.append("  $key=(not set)")
+          }
+        }
+
+        DiagnosticsService.append("Linux Development Environment Variables:")
+
+        val devVars = listOf(
+          // Package managers and build systems
+          "PKG_CONFIG_PATH", "LD_LIBRARY_PATH", "LIBRARY_PATH", "CPATH",
+          // Compilers and toolchains
+          "CC", "CXX", "CFLAGS", "CXXFLAGS", "LDFLAGS",
+          // Build system paths
+          "CMAKE_PREFIX_PATH", "ACLOCAL_PATH",
+          // Distribution-specific package managers
+          "CARGO_HOME", "RUSTUP_HOME", "GOPATH", "GOROOT",
+          "JAVA_HOME", "MAVEN_HOME", "GRADLE_HOME"
+        )
+
+        devVars.forEach { key ->
+          val value = env[key]
+          if (value != null) {
+            DiagnosticsService.append("  $key=$value")
+          } else {
+            DiagnosticsService.append("  $key=(not set)")
+          }
+        }
+      }
+
+      else -> {
+        DiagnosticsService.append("Unknown OS - skipping OS-specific variables")
+      }
+    }
+
+    // Log all other environment variables (alphabetically, one per line)
+    DiagnosticsService.append("All environment variables:")
+    env.keys.sorted().filter { it != "Path" && it != "PATH" && it != "PATHEXT" }.forEach { key ->
+      val value = env[key] ?: ""
+      DiagnosticsService.append("$key=$value")
+    }
+    DiagnosticsService.append("=== End Environment Variables ===")
+
     val exe = effectiveSettings.cliPath ?: cfg.resolveExecutable(project.basePath?.let { Path.of(it) })
     if (exe == null) {
-      DiagnosticsService.append("Codex CLI not found; PATH=\"" + (System.getenv("PATH") ?: "") + "\"")
-      val content = ContentFactory.getInstance()
-        .createContent(JLabel("Codex CLI not found in PATH"), "Chat", false)
+      DiagnosticsService.append("ERROR: Codex CLI not found")
+      val content = contentFactory.createContent(JLabel("Codex CLI not found in PATH"), "Chat", false)
       toolWindow.contentManager.addContent(content)
       return
     }
@@ -53,17 +247,85 @@ class CodexToolWindowFactory : ToolWindowFactory {
     )
     val baseConfig = CodexProcessConfig(executable = exe)
     val useWsl = effectiveSettings.useWsl && EnvironmentInfo.os == OperatingSystem.WINDOWS
-    val processConfig = if (useWsl) {
-      CodexProcessConfig(
+
+    // PowerShell scripts (.ps1) are npm launcher wrappers that call node.exe
+    // Instead of nesting PowerShell processes (which breaks stdout capture),
+    // parse the .ps1 and call node.exe directly
+    val isPowerShellScript = exe.toString().lowercase().endsWith(".ps1")
+
+    val processConfig = when {
+      useWsl -> CodexProcessConfig(
         executable = Path.of("wsl"),
         arguments = listOf("codex") + baseConfig.arguments,
         workingDirectory = baseConfig.workingDirectory,
         environment = baseConfig.environment,
         inheritParentEnvironment = baseConfig.inheritParentEnvironment
       )
-    } else baseConfig
+      isPowerShellScript && EnvironmentInfo.os == OperatingSystem.WINDOWS -> {
+        // Extract the actual node.exe command from the PowerShell wrapper
+        // PowerShell launchers follow the pattern: node.exe path/to/script.js $args
+        val scriptDir = exe.parent
+        val nodeExe = scriptDir?.resolve("node.exe") ?: Path.of("node.exe")
+        val jsScript = scriptDir?.resolve("node_modules/@openai/codex/bin/codex.js")
+
+        if (jsScript != null && jsScript.exists()) {
+          DiagnosticsService.append("DEBUG: Bypassing .ps1 wrapper, calling node.exe directly")
+          DiagnosticsService.append("DEBUG: node: $nodeExe, script: $jsScript")
+          CodexProcessConfig(
+            executable = nodeExe,
+            arguments = listOf(jsScript.toString()) + baseConfig.arguments,
+            workingDirectory = baseConfig.workingDirectory,
+            environment = baseConfig.environment,
+            inheritParentEnvironment = baseConfig.inheritParentEnvironment
+          )
+        } else {
+          DiagnosticsService.append("WARN: Could not find codex.js, falling back to PowerShell wrapper")
+          CodexProcessConfig(
+            executable = Path.of("powershell.exe"),
+            arguments = listOf("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", exe.toString()) + baseConfig.arguments,
+            workingDirectory = baseConfig.workingDirectory,
+            environment = baseConfig.environment,
+            inheritParentEnvironment = baseConfig.inheritParentEnvironment
+          )
+        }
+      }
+      else -> baseConfig
+    }
+
+    // Start process
+    DiagnosticsService.append("Starting Codex CLI with shell: ${processConfig.executable}")
+    DiagnosticsService.append("Full command: ${processConfig.executable} ${processConfig.arguments.joinToString(" ")}")
     proc.start(processConfig)
-    attachReader(proc, bus, log)
+    DiagnosticsService.append("Process started, checking if running: ${proc.isRunning()}")
+    val (stdoutThread, stderrThread) = attachReader(proc, bus, log)
+
+    // Wait for CLI to initialize (session_configured message)
+    // Note: Timeout must account for MCP server startup time (can take 10+ seconds)
+    val initialized = java.util.concurrent.CountDownLatch(1)
+    val initTimeoutMs = 20000L  // 20 seconds to allow for MCP server initialization
+
+    bus.addListener("session_configured") { _, _ ->
+      initialized.countDown()
+    }
+
+    // Block briefly to wait for initialization
+    val ready = kotlin.runCatching {
+      initialized.await(initTimeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS)
+    }.getOrDefault(false)
+
+    if (!ready) {
+      DiagnosticsService.append("ERROR: Codex CLI did not respond within ${initTimeoutMs}ms")
+      log.error("Codex CLI initialization timeout")
+      val content = contentFactory.createContent(
+          JLabel("<html>Codex CLI failed to initialize.<br>Check Diagnostics panel for details.</html>"),
+          "Chat",
+          false
+        )
+      toolWindow.contentManager.addContent(content)
+      return
+    }
+
+    DiagnosticsService.append("Codex CLI initialized successfully")
 
     val models = cfg.availableModels.toTypedArray()
     val sandboxOptions = CodexSettingsOptions.SANDBOX_POLICIES.toTypedArray()
@@ -241,21 +503,23 @@ class CodexToolWindowFactory : ToolWindowFactory {
     }
     panel.add(consoleWrapper, BorderLayout.SOUTH)
 
-    val contentFactory = ContentFactory.getInstance()
     val content = contentFactory.createContent(panel, "Chat", false)
     content.setDisposer(object : Disposable {
       override fun dispose() {
         sender.setOnSendListener(null)
         heartbeat.dispose()
         processMonitor.close()
+
+        // Interrupt reader threads to ensure clean shutdown
+        stdoutThread.interrupt()
+        stderrThread.interrupt()
+
+        // Wait briefly for threads to exit
+        kotlin.runCatching { stdoutThread.join(1000) }
+        kotlin.runCatching { stderrThread.join(1000) }
       }
     })
     toolWindow.contentManager.addContent(content)
-
-    val diagnosticsPanel = DiagnosticsPanel()
-    val diagnosticsContent = contentFactory.createContent(diagnosticsPanel, "Diagnostics", false)
-    diagnosticsContent.setDisposer(Disposable { diagnosticsPanel.dispose() })
-    toolWindow.contentManager.addContent(diagnosticsContent)
 
     if (effectiveSettings.openToolWindowOnStartup) {
       SwingUtilities.invokeLater { toolWindow.show(null) }
@@ -308,7 +572,7 @@ class CodexToolWindowFactory : ToolWindowFactory {
     usageLabel.foreground = java.awt.Color(0x55, 0x55, 0x55)
     header.add(usageLabel)
 
-    bus.addListener("SessionConfigured") { _, msg ->
+    bus.addListener("session_configured") { _, msg ->
       val m = msg.get("model")?.asString
       val e = msg.get("effort")?.asString
       val r = msg.get("rollout_path")?.asString
@@ -376,34 +640,58 @@ class CodexToolWindowFactory : ToolWindowFactory {
     }
   }
 
-  private fun attachReader(service: CodexProcessService, bus: EventBus, log: LogSink) {
-    val streams = service.streams() ?: return
+  private fun attachReader(
+    service: CodexProcessService,
+    bus: EventBus,
+    log: LogSink
+  ): Pair<Thread, Thread> {
+    val streams = service.streams() ?: return Pair(Thread(), Thread())
     val stdout = streams.first.bufferedReader(Charsets.UTF_8)
     val stderr = streams.second.bufferedReader(Charsets.UTF_8)
 
-    Thread {
+    val stdoutThread = Thread {
       try {
+        DiagnosticsService.append("DEBUG: stdout reader thread started")
         while (true) {
           val line = stdout.readLine() ?: break
+          DiagnosticsService.append("DEBUG: stdout received: ${line.take(100)}")
           ProcessHealth.onStdout()
           CodexStatusBarController.updateHealth(ProcessHealth.Status.OK)
           bus.dispatch(line)
         }
+        DiagnosticsService.append("DEBUG: stdout reader thread ended (EOF)")
       } catch (t: Throwable) {
-        log.warn("stdout reader ended: ${t.message}")
+        if (t is InterruptedException) {
+          log.info("stdout reader interrupted (expected on shutdown)")
+        } else {
+          log.warn("stdout reader ended: ${t.message}")
+          DiagnosticsService.append("DEBUG: stdout reader error: ${t.message}")
+        }
       }
-    }.apply { isDaemon = true; name = "codex-proto-stdout" }.start()
+    }.apply { isDaemon = true; name = "codex-proto-stdout" }
 
-    Thread {
+    val stderrThread = Thread {
       try {
+        DiagnosticsService.append("DEBUG: stderr reader thread started")
         while (true) {
           val line = stderr.readLine() ?: break
           DiagnosticsService.append(line)
         }
+        DiagnosticsService.append("DEBUG: stderr reader thread ended (EOF)")
       } catch (t: Throwable) {
-        log.warn("stderr reader ended: ${t.message}")
+        if (t is InterruptedException) {
+          log.info("stderr reader interrupted (expected on shutdown)")
+        } else {
+          log.warn("stderr reader ended: ${t.message}")
+          DiagnosticsService.append("DEBUG: stderr reader error: ${t.message}")
+        }
       }
-    }.apply { isDaemon = true; name = "codex-proto-stderr" }.start()
+    }.apply { isDaemon = true; name = "codex-proto-stderr" }
+
+    stdoutThread.start()
+    stderrThread.start()
+
+    return Pair(stdoutThread, stderrThread)
   }
 
   private fun buildCancelExecSubmission(execId: String): String {

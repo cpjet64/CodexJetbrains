@@ -1,11 +1,55 @@
 <idea-plugin>
   <id>dev.curt.codex</id>
-  <name>CodexJetbrains</name>
+  <name>Codex</name>
   <vendor url="https://github.com/cpjet64">Curt</vendor>
+  <description><![CDATA[
+    Codex plugin for IntelliJ-based IDEs providing advanced code assistance and tooling.
+  ]]></description>
 
   <!-- Target 2024.2+ (JBR 21); adjust if you bump the Gradle baseline -->
   <idea-version since-build="242"/>
 
   <!-- Platform-level API only; add com.intellij.modules.java if you MUST -->
   <depends>com.intellij.modules.platform</depends>
+  <depends optional="true" config-file="codex-git.xml">Git4Idea</depends>
+
+  <extensions defaultExtensionNs="com.intellij">
+    <!-- Application Services -->
+    <applicationService serviceImplementation="dev.curt.codexjb.core.CodexConfigService"/>
+    <applicationService serviceImplementation="dev.curt.codexjb.core.TelemetryService"/>
+    <applicationService serviceImplementation="dev.curt.codexjb.core.DiagnosticsService"/>
+
+    <!-- Project Services -->
+    <projectService serviceImplementation="dev.curt.codexjb.core.CodexProjectSettingsService"/>
+    <projectService serviceImplementation="dev.curt.codexjb.core.CodexProcessService"/>
+
+    <!-- Tool Window -->
+    <toolWindow id="Codex"
+                factoryClass="dev.curt.codexjb.ui.CodexToolWindowFactory"
+                anchor="right"
+                icon="AllIcons.Actions.Lightning"/>
+
+    <!-- Status Bar -->
+    <statusBarWidgetFactory id="codex.session.status" implementation="dev.curt.codexjb.ui.CodexStatusBarFactory"/>
+  </extensions>
+
+  <projectListeners>
+    <listener class="dev.curt.codexjb.core.CodexProjectCloseListener"
+              topic="com.intellij.openapi.project.ProjectManagerListener"/>
+  </projectListeners>
+
+  <actions>
+    <action id="dev.curt.codexjb.actions.AskCodexAction"
+            class="dev.curt.codexjb.actions.AskCodexAction"
+            text="Ask Codex"
+            description="Ask Codex a question">
+      <add-to-group group-id="ToolsMenu" anchor="last"/>
+    </action>
+    <action id="dev.curt.codexjb.actions.CodexReportIssueAction"
+            class="dev.curt.codexjb.actions.CodexReportIssueAction"
+            text="Report Issue to Codex"
+            description="Report an issue to Codex">
+      <add-to-group group-id="HelpMenu" anchor="last"/>
+    </action>
+  </actions>
 </idea-plugin>
