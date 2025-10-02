@@ -3,7 +3,7 @@ package dev.curt.codexjb.core
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.ConcurrentHashMap
 
-class TelemetryService {
+object TelemetryService {
     private val log: LogSink = CodexLogger.forClass(TelemetryService::class.java)
 
     // Patch apply counters

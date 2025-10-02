@@ -16,7 +16,6 @@
   <extensions defaultExtensionNs="com.intellij">
     <!-- Application Services -->
     <applicationService serviceImplementation="dev.curt.codexjb.core.CodexConfigService"/>
-    <applicationService serviceImplementation="dev.curt.codexjb.core.TelemetryService"/>
     <applicationService serviceImplementation="dev.curt.codexjb.core.DiagnosticsService"/>
 
     <!-- Project Services -->
