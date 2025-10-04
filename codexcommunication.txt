@@ -1,0 +1,608 @@
+  Deep Dive: Codex Inter-Process Communication Architecture
+
+  Overview
+
+  Codex uses a JSON-RPC 2.0-based protocol over stdio (stdin/stdout) to communicate with wrapper processes like the VS Code extension.
+   The architecture follows a server-client model where Codex acts as a server responding to client requests.
+
+  Transport Layer
+
+  Communication Method: stdio (Standard Input/Output)
+
+  - Input: JSON-RPC messages are read line-by-line from stdin
+  - Output: JSON-RPC messages are written line-by-line to stdout
+  - Format: Each message is a single line of JSON followed by a newline character (\n)
+
+  Key Implementation (codex-rs/app-server/src/lib.rs:52-73):
+
+  // Reading from stdin
+  let stdin = io::stdin();
+  let reader = BufReader::new(stdin);
+  let mut lines = reader.lines();
+
+  while let Some(line) = lines.next_line().await.unwrap_or_default() {
+      match serde_json::from_str::<JSONRPCMessage>(&line) {
+          Ok(msg) => {
+              incoming_tx.send(msg).await;
+          }
+          Err(e) => error!("Failed to deserialize JSONRPCMessage: {e}"),
+      }
+  }
+
+  Protocol Structure
+
+  JSON-RPC Message Types
+
+  Defined in codex-rs/app-server-protocol/src/jsonrpc_lite.rs:
+
+  pub enum JSONRPCMessage {
+      Request(JSONRPCRequest),      // Expects a response
+      Notification(JSONRPCNotification), // No response expected
+      Response(JSONRPCResponse),    // Response to a request
+      Error(JSONRPCError),          // Error response
+  }
+
+  1. Request (Client → Server)
+
+  {
+    "id": "unique-request-id",
+    "method": "methodName",
+    "params": { /* optional parameters */ }
+  }
+
+  2. Response (Server → Client)
+
+  {
+    "id": "request-id",
+    "result": { /* response data */ }
+  }
+
+  3. Notification (Bidirectional, no response expected)
+
+  {
+    "method": "notificationMethod",
+    "params": { /* optional parameters */ }
+  }
+
+  4. Error
+
+  {
+    "id": "request-id",
+    "error": {
+      "code": -32600,
+      "message": "Error description",
+      "data": { /* optional error details */ }
+    }
+  }
+
+  Client-to-Server Protocol (App Server Protocol)
+
+  Defined in codex-rs/app-server-protocol/src/protocol.rs
+
+  Initialization Flow
+
+  Step 1: Initialize
+  {
+    "id": 1,
+    "method": "initialize",
+    "params": {
+      "clientInfo": {
+        "name": "vscode-extension",
+        "title": "VS Code Codex Extension",
+        "version": "1.0.0"
+      }
+    }
+  }
+
+  Response:
+  {
+    "id": 1,
+    "result": {
+      "userAgent": "codex/0.42.0 (platform-info; client-name/version)"
+    }
+  }
+
+  Step 2: Client sends initialized notification
+  {
+    "method": "initialized"
+  }
+
+  Core Client Requests
+
+  1. NewConversation - Create a new conversation
+
+  {
+    "id": 2,
+    "method": "newConversation",
+    "params": {
+      "model": "claude-sonnet-4-5",
+      "profile": "default",
+      "cwd": "/path/to/working/directory",
+      "approvalPolicy": "on-request",
+      "sandbox": "workspace-write",
+      "config": {
+        // Optional config overrides
+      },
+      "baseInstructions": "Optional custom instructions",
+      "includePlanTool": true,
+      "includeApplyPatchTool": true
+    }
+  }
+
+  Response:
+  {
+    "id": 2,
+    "result": {
+      "conversationId": "uuid-of-conversation",
+      "model": "claude-sonnet-4-5",
+      "reasoningEffort": "medium",
+      "rolloutPath": "/path/to/session/file.jsonl"
+    }
+  }
+
+  2. AddConversationListener - Subscribe to conversation events
+
+  {
+    "id": 3,
+    "method": "addConversationListener",
+    "params": {
+      "conversationId": "uuid-of-conversation"
+    }
+  }
+
+  Response:
+  {
+    "id": 3,
+    "result": {
+      "subscriptionId": "uuid-of-subscription"
+    }
+  }
+
+  Implementation (codex-rs/app-server/src/codex_message_processor.rs:1088-1161):
+  - Spawns a background task that listens to the conversation's event stream
+  - Forwards all events as notifications to the client
+  - Events are sent with method: "codex/event/{event_type}"
+
+  3. SendUserTurn - Send user input to the conversation
+
+  {
+    "id": 4,
+    "method": "sendUserTurn",
+    "params": {
+      "conversationId": "uuid",
+      "items": [
+        {
+          "type": "text",
+          "data": { "text": "User message here" }
+        },
+        {
+          "type": "image",
+          "data": { "imageUrl": "data:image/png;base64,..." }
+        }
+      ],
+      "cwd": "/working/directory",
+      "approvalPolicy": "on-request",
+      "sandboxPolicy": {
+        "mode": "workspace-write",
+        "writableRoots": [],
+        "networkAccess": false
+      },
+      "model": "claude-sonnet-4-5",
+      "effort": "medium",
+      "summary": "concise"
+    }
+  }
+
+  4. InterruptConversation - Stop the current turn
+
+  {
+    "id": 5,
+    "method": "interruptConversation",
+    "params": {
+      "conversationId": "uuid"
+    }
+  }
+
+  5. ListConversations - Get list of recorded sessions
+
+  {
+    "id": 6,
+    "method": "listConversations",
+    "params": {
+      "pageSize": 50,
+      "cursor": "optional-pagination-cursor"
+    }
+  }
+
+  6. ResumeConversation - Resume a previous session
+
+  {
+    "id": 7,
+    "method": "resumeConversation",
+    "params": {
+      "path": "/path/to/rollout.jsonl",
+      "overrides": {
+        // Optional NewConversationParams overrides
+      }
+    }
+  }
+
+  Server-to-Client Protocol
+
+  Server Notifications
+
+  1. SessionConfigured - Conversation is ready
+
+  {
+    "method": "sessionConfigured",
+    "params": {
+      "sessionId": "conversation-uuid",
+      "model": "claude-sonnet-4-5",
+      "reasoningEffort": "medium",
+      "historyLogId": 12345,
+      "historyEntryCount": 0,
+      "initialMessages": null,
+      "rolloutPath": "/path/to/session.jsonl"
+    }
+  }
+
+  2. Conversation Events - Real-time updates
+
+  Format: "codex/event/{event_type}"
+
+  Examples:
+
+  Agent Message:
+  {
+    "method": "codex/event/agent_message",
+    "params": {
+      "id": "submission-id",
+      "msg": {
+        "type": "agent_message",
+        "message": "I'll help you with that..."
+      },
+      "conversationId": "uuid"
+    }
+  }
+
+  Agent Message Delta (streaming):
+  {
+    "method": "codex/event/agent_message_delta",
+    "params": {
+      "id": "submission-id",
+      "msg": {
+        "type": "agent_message_delta",
+        "delta": "text chunk"
+      },
+      "conversationId": "uuid"
+    }
+  }
+
+  Tool Execution Begin:
+  {
+    "method": "codex/event/exec_command_begin",
+    "params": {
+      "id": "submission-id",
+      "msg": {
+        "type": "exec_command_begin",
+        "callId": "unique-call-id",
+        "command": ["ls", "-la"],
+        "cwd": "/path",
+        "parsedCmd": [...]
+      },
+      "conversationId": "uuid"
+    }
+  }
+
+  Tool Execution Output (streaming):
+  {
+    "method": "codex/event/exec_command_output_delta",
+    "params": {
+      "id": "submission-id",
+      "msg": {
+        "type": "exec_command_output_delta",
+        "callId": "unique-call-id",
+        "stream": "stdout",
+        "chunk": "base64-encoded-bytes"
+      },
+      "conversationId": "uuid"
+    }
+  }
+
+  Tool Execution End:
+  {
+    "method": "codex/event/exec_command_end",
+    "params": {
+      "id": "submission-id",
+      "msg": {
+        "type": "exec_command_end",
+        "callId": "unique-call-id",
+        "stdout": "output",
+        "stderr": "errors",
+        "aggregatedOutput": "combined",
+        "exitCode": 0,
+        "duration": "1234ms",
+        "formattedOutput": "formatted for model"
+      },
+      "conversationId": "uuid"
+    }
+  }
+
+  Task Complete:
+  {
+    "method": "codex/event/task_complete",
+    "params": {
+      "id": "submission-id",
+      "msg": {
+        "type": "task_complete",
+        "lastAgentMessage": "Final message text"
+      },
+      "conversationId": "uuid"
+    }
+  }
+
+  Token Count:
+  {
+    "method": "codex/event/token_count",
+    "params": {
+      "id": "submission-id",
+      "msg": {
+        "type": "token_count",
+        "info": {
+          "totalTokenUsage": {
+            "inputTokens": 1000,
+            "cachedInputTokens": 500,
+            "outputTokens": 300,
+            "reasoningOutputTokens": 100,
+            "totalTokens": 1300
+          },
+          "lastTokenUsage": { /* same structure */ },
+          "modelContextWindow": 200000
+        },
+        "rateLimits": null
+      },
+      "conversationId": "uuid"
+    }
+  }
+
+  Server Requests (require client response)
+
+  1. ExecCommandApproval - Request permission to run command
+
+  {
+    "id": "server-request-id",
+    "method": "execCommandApproval",
+    "params": {
+      "conversationId": "uuid",
+      "callId": "tool-call-id",
+      "command": ["npm", "install"],
+      "cwd": "/project/path",
+      "reason": "Optional explanation"
+    }
+  }
+
+  Client must respond:
+  {
+    "id": "server-request-id",
+    "result": {
+      "decision": "approved" | "approved_for_session" | "denied" | "abort"
+    }
+  }
+
+  2. ApplyPatchApproval - Request permission to modify files
+
+  {
+    "id": "server-request-id",
+    "method": "applyPatchApproval",
+    "params": {
+      "conversationId": "uuid",
+      "callId": "patch-call-id",
+      "fileChanges": {
+        "/path/to/file.txt": {
+          "type": "update",
+          "unifiedDiff": "diff content",
+          "movePath": null
+        }
+      },
+      "reason": "Optional explanation",
+      "grantRoot": "/optional/writable/root"
+    }
+  }
+
+  Client must respond:
+  {
+    "id": "server-request-id",
+    "result": {
+      "decision": "approved" | "approved_for_session" | "denied" | "abort"
+    }
+  }
+
+  Complete Event Types
+
+  From codex-rs/protocol/src/protocol.rs:421-522:
+
+  - error - Error during submission execution
+  - task_started - Agent started a task
+  - task_complete - Agent completed all actions
+  - token_count - Token usage update
+  - agent_message - Agent text output (full message)
+  - user_message - User/system input message
+  - agent_message_delta - Streaming agent text chunk
+  - agent_reasoning - Reasoning event from agent
+  - agent_reasoning_delta - Streaming reasoning chunk
+  - agent_reasoning_raw_content - Raw chain-of-thought
+  - agent_reasoning_raw_content_delta - Streaming raw reasoning
+  - agent_reasoning_section_break - New reasoning section
+  - session_configured - Session ready acknowledgment
+  - mcp_tool_call_begin - MCP tool invocation started
+  - mcp_tool_call_end - MCP tool invocation completed
+  - web_search_begin - Web search started
+  - web_search_end - Web search completed
+  - exec_command_begin - Command execution started
+  - exec_command_output_delta - Streaming command output
+  - exec_command_end - Command execution finished
+  - exec_approval_request - Approval needed for command
+  - apply_patch_approval_request - Approval needed for file changes
+  - background_event - Background event notification
+  - stream_error - Model stream error/disconnect
+  - patch_apply_begin - Patch application started
+  - patch_apply_end - Patch application finished
+  - turn_diff - File changes during turn
+  - get_history_entry_response - History entry data
+  - mcp_list_tools_response - Available MCP tools
+  - list_custom_prompts_response - Available custom prompts
+  - plan_update - Plan tool update
+  - turn_aborted - Turn was aborted
+  - shutdown_complete - Shutdown finished
+  - conversation_path - Conversation file path
+  - entered_review_mode - Review mode entered
+  - exited_review_mode - Review mode exited
+
+  Starting the App Server
+
+  From VS Code Extension (TypeScript SDK)
+
+  sdk/typescript/src/exec.ts shows how to spawn Codex:
+
+  const child = spawn(codexExecutablePath, ["exec", "--experimental-json"], {
+    env: {
+      ...process.env,
+      OPENAI_BASE_URL: baseUrl,
+      OPENAI_API_KEY: apiKey,
+    }
+  });
+
+  // Read stdout line by line
+  const rl = readline.createInterface({
+    input: child.stdout,
+    crlfDelay: Infinity,
+  });
+
+  for await (const line of rl) {
+    const message = JSON.parse(line);
+    // Handle JSON-RPC message
+  }
+
+  From Command Line
+
+  # Start app server mode
+  codex app-server
+
+  # Or use MCP server mode
+  codex mcp-server
+
+  Internal Architecture
+
+  Message Processing Flow
+
+  1. Stdin Reader Task - Reads JSON-RPC messages from stdin
+  2. Message Processor Task - Handles incoming messages, dispatches to handlers
+  3. Stdout Writer Task - Writes outgoing JSON-RPC messages to stdout
+  4. Conversation Listener Tasks - One spawned per subscription, forwards events
+
+  Channel-based Architecture:
+  stdin → incoming_rx → MessageProcessor → outgoing_tx → stdout
+                             ↓
+                      CodexMessageProcessor
+                             ↓
+                     ConversationManager
+                             ↓
+                      CodexConversation
+                             ↓
+                      event_rx (mpsc channel)
+
+  Key Implementation Details
+
+  Event Streaming (codex_message_processor.rs:1114-1157):
+  tokio::spawn(async move {
+      loop {
+          tokio::select! {
+              _ = &mut cancel_rx => {
+                  // Unsubscribed
+                  break;
+              }
+              event = conversation.next_event() => {
+                  let event = event?;
+
+                  // Format as notification
+                  let method = format!("codex/event/{}", event.msg);
+                  let mut params = serde_json::to_value(event)?;
+                  params["conversationId"] = conversation_id.into();
+
+                  // Send to client
+                  outgoing.send_notification(OutgoingNotification {
+                      method,
+                      params: Some(params)
+                  }).await;
+              }
+          }
+      }
+  });
+
+  Sandbox Policy Structure
+
+  {
+    "mode": "workspace-write",
+    "writableRoots": ["/additional/writable/path"],
+    "networkAccess": false,
+    "excludeTmpdirEnvVar": false,
+    "excludeSlashTmp": false
+  }
+
+  Modes:
+  - "danger-full-access" - No restrictions
+  - "read-only" - Read-only filesystem
+  - "workspace-write" - Write to cwd + TMPDIR
+
+  Authentication
+
+  Login with API Key
+
+  {
+    "id": 1,
+    "method": "loginApiKey",
+    "params": {
+      "apiKey": "sk-..."
+    }
+  }
+
+  Login with ChatGPT (OAuth)
+
+  {
+    "id": 1,
+    "method": "loginChatGpt"
+  }
+
+  Response includes auth URL:
+  {
+    "id": 1,
+    "result": {
+      "loginId": "uuid",
+      "authUrl": "https://auth.openai.com/..."
+    }
+  }
+
+  Check Auth Status
+
+  {
+    "id": 1,
+    "method": "getAuthStatus",
+    "params": {
+      "includeToken": true,
+      "refreshToken": false
+    }
+  }
+
+  Summary
+
+  The Codex wrapper communication is:
+  1. Transport: Line-delimited JSON over stdio
+  2. Protocol: JSON-RPC 2.0 (without the "jsonrpc": "2.0" field)
+  3. Initialization: initialize → initialized → ready
+  4. Conversations: Create → Subscribe → Send messages → Receive events
+  5. Events: Server pushes notifications in format codex/event/{type}
+  6. Approvals: Server requests approval via JSON-RPC requests
+  7. Bidirectional: Both client and server can send requests
+
+  This architecture allows VS Code extension (or any wrapper) to control Codex entirely through stdio, making it language-agnostic and
+   simple to integrate.

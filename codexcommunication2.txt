@@ -1,0 +1,525 @@
+• Here’s a precise map of how Codex expects to talk to other processes, and how a VS Code wrapper/extension should structure that
+  communication.
+
+  Big Picture
+
+  - Two supported transports:
+      - App Server over stdio: spawn codex-app-server, exchange newline-delimited JSON messages (JSON-RPC‑like without the "jsonrpc"
+  field). Best fit for wrappers like a VS Code extension.
+      - MCP Server over stdio: spawn codex mcp-server for standard MCP (JSON‑RPC 2.0 with "jsonrpc": "2.0"). Useful if you already have an
+  MCP client stack.
+  - The high-level turn protocol is SQ/EQ (Submission Queue / Event Queue) and maps onto the app server’s JSON‑RPC request/response +
+  notification stream (codex-rs/docs/protocol_v1.md:82).
+
+  Transport (App Server)
+
+  - Process: launch codex-app-server as a long‑lived child.
+  - Wire format: newline‑delimited JSON (one JSON per line). No "jsonrpc" field is sent or expected (codex-rs/app-server-protocol/src/
+  jsonrpc_lite.rs:1).
+  - Read loop: server reads lines from stdin and writes responses to stdout (codex-rs/app-server/src/lib.rs:53, codex-rs/app-server/src/
+  lib.rs:111).
+  - Message envelope:
+      - Requests: { "id": number|string, "method": string, "params"?: object }
+      - Responses: { "id": number|string, "result": any }
+      - Errors: { "error": { code: number, message: string, data?: any }, "id": number|string }
+      - Notifications: { "method": string, "params"?: object }
+  - Error codes: -32600 invalid request, -32603 internal error (codex-rs/app-server/src/error_code.rs:1).
+
+  App Server Protocol (what your extension sends/receives)
+
+  - All types and methods are in the “app server” protocol crate (codex-rs/app-server-protocol/src/protocol.rs:58). TS bindings can be
+  generated via codex-protocol-ts (codex-rs/protocol-ts/src/lib.rs:24).
+
+  Lifecycle (happy path):
+
+  1. Initialize
+      - Request: initialize { clientInfo: { name, title?, version } }
+      - Response: { userAgent }
+      - Then send a client notification: initialized (no params)
+      - Files: codex-rs/app-server/src/message_processor.rs:40, codex-rs/app-server/tests/common/mcp_process.rs:121
+  2. Start a conversation
+      - Request: newConversation { model?, profile?, cwd?, approvalPolicy?, sandbox?, config?, baseInstructions?, includePlanTool?,
+  includeApplyPatchTool? }
+      - Response: { conversationId, model, reasoningEffort?, rolloutPath }
+      - Example shape: codex-rs/app-server-protocol/src/protocol.rs:85 and unit test serialization right below.
+  3. Subscribe to events
+      - Request: addConversationListener { conversationId }
+      - Response: { subscriptionId }
+      - Required: without this, you will not receive Codex events nor server‑initiated approval requests (see event loop wiring codex-rs/
+  app-server/src/codex_message_processor.rs:1088 and 1249).
+  4. Send user input
+      - Request: sendUserMessage { conversationId, items: InputItem[] }
+          - InputItem: Text { text }, Image { imageUrl }, LocalImage { path }
+      - or sendUserTurn { conversationId, items, cwd, approvalPolicy, sandboxPolicy, model, effort?, summary }
+      - Response: {} (ack that input was queued)
+  5. Handle events and approvals
+      - Notifications:
+          - Codex events stream: method codex/event/{snake_case_event_type}, params contain the full serialized Event plus conversationId
+  (codex-rs/app-server/src/codex_message_processor.rs:1134). Common events include:
+              - session_configured, task_started, agent_message, agent_message_delta, exec_approval_request, apply_patch_approval_request,
+  patch_apply_begin, patch_apply_end, turn_complete, task_complete, turn_aborted, etc. (codex-rs/protocol/src/protocol.rs:460)
+          - App-level notifications: loginChatGptComplete, authStatusChange, sessionConfigured (codex-rs/app-server-protocol/src/
+  protocol.rs:780)
+      - Server‑initiated requests (you must reply):
+          - execCommandApproval { conversationId, callId, command, cwd, reason? }
+              - Respond with: { decision: "approved" | "approved_for_session" | "denied" | "abort" }
+          - applyPatchApproval { conversationId, callId, fileChanges, reason?, grantRoot? }
+              - fileChanges is a map of path → { type, ... } where type is add|delete|update and may include unified diffs (codex-rs/app-
+  server-protocol/src/protocol.rs:680, codex-rs/protocol/src/protocol.rs:1506)
+          - These requests are emitted only while a listener is active (codex-rs/app-server/src/codex_message_processor.rs:1249).
+  6. Interrupt a turn (cancel)
+      - Request: interruptConversation { conversationId }
+      - Response: { abortReason } returned only after the TurnAborted event posts back through the active listener, which then triggers
+  the response resolution (codex-rs/app-server/src/codex_message_processor.rs:1268).
+
+  Other useful methods:
+
+  - listConversations { pageSize?, cursor? } → { items: [{conversationId, path, preview, timestamp?}], nextCursor? }
+  - resumeConversation { path, overrides? } → { conversationId, model, initialMessages? } plus a sessionConfigured notification (codex-rs/
+  app-server/src/codex_message_processor.rs:740).
+  - archiveConversation { conversationId, rolloutPath } → {}
+  - getUserAgent, userInfo, getUserSavedConfig, setDefaultModel (for small UX touches)
+  - gitDiffToRemote { cwd } → { sha, diff }
+  - execOneOffCommand { command, cwd, timeoutMs?, sandboxPolicy? } → { exitCode, stdout, stderr }
+  - Auth helpers: loginApiKey { apiKey }, loginChatGpt → { loginId, authUrl }, cancelLoginChatGpt { loginId }, logoutChatGpt,
+  getAuthStatus { includeToken?, refreshToken? } (codex-rs/app-server/tests/suite/auth.rs:1)
+
+  Concrete JSON examples (App Server)
+
+  - Initialize:
+      - Request: { "method": "initialize", "id": 1, "params": { "clientInfo": { "name": "my-vscode-ext", "version": "0.1.0" } } }
+      - Response: { "id": 1, "result": { "userAgent": "Codex/…" } }
+      - Notification: { "method": "initialized" }
+  - New conversation:
+      - Request: { "method": "newConversation", "id": 2, "params": { "model": "gpt-5-codex", "approvalPolicy": "on-request" } }
+      - Response: { "id": 2, "result": { "conversationId": "…", "model": "gpt-5-codex", "rolloutPath": "…" } }
+  - Server request for approval:
+      - Request from server: { "method": "execCommandApproval", "id": 7, "params": { "conversationId": "…", "callId": "call-42",
+  "command": ["echo","hello"], "cwd": "/tmp", "reason": "…" } }
+      - Your response: { "id": 7, "result": { "decision": "approved" } }
+  - Event notification:
+      - Notification: { "method": "codex/event/task_complete", "params": { "id": "…", "msg": { "type": "task_complete",
+  "last_agent_message": "…" }, "conversationId": "…" } }
+
+  Event stream mapping
+
+  - Events are serialized from core as { id: string, msg: { type: snake_case_type, … } } (codex-rs/protocol/src/protocol.rs:410). The app
+  server converts msg’s type to the notification method suffix (codex/event/{type}) and inserts conversationId into the params (codex-rs/
+  app-server/src/codex_message_processor.rs:1134).
+
+  Key requirements for a stable wrapper
+
+  - Always call initialize then send initialized before anything else (codex-rs/app-server/src/message_processor.rs:40).
+  - Always call addConversationListener per conversation; otherwise you will never see:
+      - The codex/event/* stream for display.
+      - Server‑initiated approval requests (without which sessions will stall).
+  - Correlate all request/response pairs via the id you assign (and handle Error messages).
+  - Use line-oriented IO; parse a JSON per newline; do not buffer multiple messages per line.
+  - On dispose, call removeConversationListener { subscriptionId } and cleanly signal process shutdown.
+
+  MCP Server alternative
+
+  outgoing_message.rs:151).
+  - Good for MCP-native environments or existing MCP clients (codex-rs/docs/codex_mcp_interface.md:7).
+
+  Types and codegen
+  (codex-rs/protocol-ts/src/main.rs:19).
+
+  Putting it together (structure your extension)
+
+  - Startup:
+      - Spawn codex-app-server with stdin/stdout piped.
+      - Send initialize → await response → send initialized.
+  - Session:
+      - newConversation → addConversationListener (store subscriptionId) → render codex/event/* notifications.
+      - When you receive execCommandApproval or applyPatchApproval, prompt the user and respond with a decision.
+      - Use sendUserMessage or sendUserTurn to drive turns. For cancel, send interruptConversation and wait for the response (arrives
+  after a turn_aborted event).
+  - Teardown:
+      - removeConversationListener and terminate the child process.
+
+  If you want, I can also produce a minimal Node/TypeScript snippet showing spawning, line-by-line JSON decoding, and the initialize/
+  newConversation/listener flow, or generate TS types for you from the protocol crate.
+
+
+› yes do all of that
+
+
+• Explored
+  └ Search enum InputItem in protocol.rs
+    Read protocol.rs
+
+─ Worked for 2m 27s ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+
+• Great — here’s a minimal, pragmatic Node/TypeScript client you can drop into a VS Code extension (or any Node app) to talk to Codex via
+  the App Server transport. It spawns the server, performs the initialize handshake, starts a conversation, subscribes to events, streams
+  and renders notifications, and handles server-initiated approval requests.
+
+  I also included the MCP variant notes and how to generate TypeScript types if you want stricter typing.
+
+  App Server Client (TypeScript)
+
+  - Transport: spawn codex-app-server, newline-delimited JSON messages (no "jsonrpc" field).
+  - Requests you send: initialize, newConversation, addConversationListener, sendUserMessage/sendUserTurn, interruptConversation, etc.
+  - Notifications you receive: codex/event/<snake_case_event_type>, authStatusChange, loginChatGptComplete, sessionConfigured.
+  - Server-initiated requests you must answer: execCommandApproval, applyPatchApproval.
+
+  Code: codexAppServerClient.ts
+
+  import { spawn, ChildProcessWithoutNullStreams } from "node:child_process";
+  import readline from "node:readline";
+
+  type RequestId = number | string;
+
+  type JSONRPCRequest = { id: RequestId; method: string; params?: any };
+  type JSONRPCResponse = { id: RequestId; result: any };
+  type JSONRPCError = { id: RequestId; error: { code: number; message: string; data?: any } };
+  type JSONRPCNotification = { method: string; params?: any };
+  type JSONRPCMessage = JSONRPCRequest | JSONRPCResponse | JSONRPCError | JSONRPCNotification;
+
+  type ReviewDecision = "approved" | "approved_for_session" | "denied" | "abort";
+
+  // --- App-server requests you’ll send ---
+  type InitializeParams = { clientInfo: { name: string; title?: string; version: string } };
+  type NewConversationParams = {
+    model?: string;
+    profile?: string;
+    cwd?: string;
+    approvalPolicy?: "untrusted" | "on-request" | "on-failure" | "never";
+    sandbox?: "read-only" | "workspace-write" | "danger-full-access";
+    config?: Record<string, any>;
+    baseInstructions?: string;
+    includePlanTool?: boolean;
+    includeApplyPatchTool?: boolean;
+  };
+  type AddConversationListenerParams = { conversationId: string };
+  type SendUserMessageParams = {
+    conversationId: string;
+    items: Array<
+      | { type: "text"; data: { text: string } }
+      | { type: "image"; data: { image_url: string } }
+      | { type: "localImage"; data: { path: string } }
+    >;
+  };
+  type SendUserTurnParams = {
+    conversationId: string;
+    items: SendUserMessageParams["items"];
+    cwd: string;
+    approvalPolicy: "untrusted" | "on-request" | "on-failure" | "never";
+    sandboxPolicy:
+      | { mode: "danger-full-access" }
+      | { mode: "read-only" }
+      | {
+          mode: "workspace-write";
+          writableRoots?: string[];
+          networkAccess?: boolean;
+          excludeTmpdirEnvVar?: boolean;
+          excludeSlashTmp?: boolean;
+        };
+    model: string;
+    effort?: "low" | "medium" | "high";
+    summary: "none" | "concise" | "detailed";
+  };
+  type InterruptConversationParams = { conversationId: string };
+
+  // --- Server -> client requests you must answer ---
+  type ExecCommandApprovalParams = {
+    conversationId: string;
+    callId: string;
+    command: string[];
+    cwd: string;
+    reason?: string;
+  };
+  type ApplyPatchApprovalParams = {
+    conversationId: string;
+    callId: string;
+    fileChanges: Record<
+      string,
+      | { type: "add"; data: { content: string } }
+      | { type: "delete"; data: { content: string } }
+      | { type: "update"; data: { unified_diff: string; move_path?: string } }
+    >;
+    reason?: string;
+    grantRoot?: string;
+  };
+
+  type ServerRequest =
+    | { method: "execCommandApproval"; id: RequestId; params: ExecCommandApprovalParams }
+    | { method: "applyPatchApproval"; id: RequestId; params: ApplyPatchApprovalParams };
+
+  type ServerNotification =
+    | { method: `codex/event/${string}`; params: any }
+    | { method: "authStatusChange"; params: any }
+    | { method: "loginChatGptComplete"; params: any }
+    | { method: "sessionConfigured"; params: any };
+
+  // Simple event handler hooks
+  export type EventHandler = (method: string, params: any) => void;
+  export type ExecApprovalHandler = (p: ExecCommandApprovalParams) => Promise<ReviewDecision> | ReviewDecision;
+  export type PatchApprovalHandler = (p: ApplyPatchApprovalParams) => Promise<ReviewDecision> | ReviewDecision;
+
+  export class CodexAppServerClient {
+    private child?: ChildProcessWithoutNullStreams;
+    private rl?: readline.Interface;
+    private nextId = 1;
+    private pending = new Map<RequestId, { resolve: (v: any) => void; reject: (e: any) => void }>();
+
+    constructor(
+      private opts: {
+        binPath?: string; // defaults to "codex-app-server" on PATH
+        env?: NodeJS.ProcessEnv;
+        onEvent?: EventHandler;
+        onExecApproval?: ExecApprovalHandler;
+        onPatchApproval?: PatchApprovalHandler;
+        stderrToConsole?: boolean;
+      } = {},
+    ) {}
+
+    start() {
+      if (this.child) return;
+      const bin = this.opts.binPath || "codex-app-server";
+      this.child = spawn(bin, { stdio: ["pipe", "pipe", "pipe"], env: { ...process.env, ...this.opts.env } });
+
+      if (!this.child.stdout || !this.child.stdin) {
+        throw new Error("codex-app-server must have piped stdio");
+      }
+
+      this.rl = readline.createInterface({ input: this.child.stdout, crlfDelay: Infinity });
+      this.rl.on("line", (line) => this.onLine(line));
+      this.child.on("exit", (code, signal) => {
+        const err = new Error(`codex-app-server exited code=${code} signal=${signal ?? ""}`.trim());
+        for (const { reject } of this.pending.values()) reject(err);
+        this.pending.clear();
+      });
+
+      if (this.opts.stderrToConsole && this.child.stderr) {
+        const errRl = readline.createInterface({ input: this.child.stderr, crlfDelay: Infinity });
+        errRl.on("line", (l) => console.error(`[codex-app-server] ${l}`));
+      }
+    }
+
+    async stop() {
+      this.rl?.close();
+      if (this.child && !this.child.killed) this.child.kill();
+      this.child?.removeAllListeners();
+      this.child = undefined;
+    }
+
+    // High-level helpers
+    async initialize(params: InitializeParams) {
+      const res = await this.sendRequest("initialize", params);
+      await this.sendNotification("initialized");
+      return res as { userAgent: string };
+    }
+
+    async newConversation(params: NewConversationParams) {
+      return (await this.sendRequest("newConversation", params)) as {
+        conversationId: string;
+        model: string;
+        reasoningEffort?: "low" | "medium" | "high";
+        rolloutPath: string;
+      };
+    }
+
+    async addConversationListener(conversationId: string) {
+      return (await this.sendRequest("addConversationListener", { conversationId })) as { subscriptionId: string };
+    }
+
+    async removeConversationListener(subscriptionId: string) {
+      return (await this.sendRequest("removeConversationListener", { subscriptionId })) as Record<string, never>;
+    }
+
+    async sendUserMessage(conversationId: string, text: string) {
+      const params: SendUserMessageParams = {
+        conversationId,
+        items: [{ type: "text", data: { text } }],
+      };
+      await this.sendRequest("sendUserMessage", params);
+    }
+
+    async sendUserTurn(params: SendUserTurnParams) {
+      await this.sendRequest("sendUserTurn", params);
+    }
+
+    async interruptConversation(conversationId: string) {
+      const res = await this.sendRequest("interruptConversation", { conversationId } as InterruptConversationParams);
+      return res as { abortReason: "interrupted" | "replaced" | "review_ended" };
+    }
+
+    // Low-level send
+    private async sendRequest(method: string, params?: any): Promise<any> {
+      const id = this.nextId++;
+      const msg: JSONRPCRequest = { id, method, params };
+      this.writeLine(msg);
+      return new Promise((resolve, reject) => this.pending.set(id, { resolve, reject }));
+    }
+
+    private async sendNotification(method: string, params?: any): Promise<void> {
+      const msg: JSONRPCNotification = { method, params };
+      this.writeLine(msg);
+    }
+
+    private writeLine(obj: any) {
+      if (!this.child?.stdin) throw new Error("process not started");
+      this.child.stdin.write(JSON.stringify(obj));
+      this.child.stdin.write("\n");
+    }
+
+    // Incoming
+    private onLine(line: string) {
+      let msg: JSONRPCMessage;
+      try {
+        msg = JSON.parse(line);
+      } catch (e) {
+        console.error("Failed to parse JSON:", e, line);
+        return;
+      }
+
+      if ("result" in msg && "id" in msg) {
+        const pending = this.pending.get(msg.id);
+        if (pending) {
+          this.pending.delete(msg.id);
+          pending.resolve(msg.result);
+        }
+        return;
+      }
+
+      if ("error" in msg && "id" in msg) {
+        const pending = this.pending.get(msg.id);
+        if (pending) {
+          this.pending.delete(msg.id);
+          pending.reject(msg.error);
+        }
+        return;
+      }
+
+      if ("method" in msg && "id" in msg) {
+        // Server -> client request (approval)
+        this.handleServerRequest(msg as ServerRequest).catch((err) => {
+          // Best-effort: reply with error
+          const errResp: JSONRPCError = { id: msg.id, error: { code: -32603, message: String(err) } };
+          this.writeLine(errResp);
+        });
+        return;
+      }
+
+      if ("method" in msg) {
+        // Notification
+        const note = msg as ServerNotification;
+        if (this.opts.onEvent) this.opts.onEvent(note.method, note.params);
+        return;
+      }
+    }
+
+    private async handleServerRequest(req: ServerRequest) {
+      if (req.method === "execCommandApproval") {
+        const decide =
+          this.opts.onExecApproval?.(req.params) ??
+          ("denied" as ReviewDecision); // default to deny to be safe
+        const decision = await Promise.resolve(decide);
+        const resp: JSONRPCResponse = { id: req.id, result: { decision } };
+        this.writeLine(resp);
+        return;
+      }
+
+      if (req.method === "applyPatchApproval") {
+        const decide =
+          this.opts.onPatchApproval?.(req.params) ??
+          ("denied" as ReviewDecision); // default to deny to be safe
+        const decision = await Promise.resolve(decide);
+        const resp: JSONRPCResponse = { id: req.id, result: { decision } };
+        this.writeLine(resp);
+        return;
+      }
+
+      // Unknown server request
+      const err: JSONRPCError = {
+        id: req.id,
+        error: { code: -32601, message: `Unsupported method ${req.method}` },
+      };
+      this.writeLine(err);
+    }
+  }
+
+  Usage Example
+
+  import { CodexAppServerClient } from "./codexAppServerClient";
+
+  async function main() {
+    const codex = new CodexAppServerClient({
+      onEvent(method, params) {
+        if (method.startsWith("codex/event/")) {
+          const kind = method.slice("codex/event/".length);
+          // params is the serialized core Event { id, msg: { type, ... }, conversationId }
+          console.log(`[event] ${kind}`, params.msg);
+        } else {
+          console.log(`[note] ${method}`, params);
+        }
+      },
+      // Auto-approve everything for demo. In a real extension, prompt the user.
+      onExecApproval: async ({ command, cwd, reason }) => {
+        console.log(`[approval:exec] cwd=${cwd} cmd=${command.join(" ")} reason=${reason ?? ""}`);
+        return "approved";
+      },
+      onPatchApproval: async ({ fileChanges, reason }) => {
+        console.log(`[approval:patch] reason=${reason ?? ""}`, Object.keys(fileChanges));
+        return "approved";
+      },
+      stderrToConsole: true,
+    });
+
+    codex.start();
+    await codex.initialize({ clientInfo: { name: "my-vscode-codex", version: "0.1.0" } });
+
+    const { conversationId } = await codex.newConversation({
+      model: "gpt-5-codex",
+      approvalPolicy: "on-request",
+      // sandbox: "workspace-write", // optional
+      // cwd: "/path/to/workspace",
+    });
+
+    await codex.addConversationListener(conversationId);
+    await codex.sendUserMessage(conversationId, "Hello Codex!");
+
+    // Later: interrupt, remove listener, stop
+    // const { abortReason } = await codex.interruptConversation(conversationId);
+    // await codex.removeConversationListener(subscriptionId);
+    // await codex.stop();
+  }
+
+  main().catch((e) => console.error(e));
+
+  Notes:
+
+  - sendUserMessage items use external tagging with content = "data": { type: "text", data: { text: "..." } } (matches codex-rs/app-
+  server-protocol/src/protocol.rs:590).
+  - Approval decisions must be snake_case: "approved" | "approved_for_session" | "denied" | "abort".
+
+  MCP Variant (JSON‑RPC 2.0)
+
+  - Spawn codex mcp-server (or codex-mcp-server) instead of codex-app-server.
+  - Every message must include "jsonrpc": "2.0".
+  - Methods, params, and approval flow are functionally the same (see codex-rs/docs/codex_mcp_interface.md).
+  - Minimal change: when constructing messages, include jsonrpc: "2.0" in both requests, responses, and notifications; and parse incoming
+  messages with that field present.
+
+  Example send (MCP):
+
+  const req = { jsonrpc: "2.0", id: 1, method: "initialize", params: { clientInfo: { name, version } } };
+  child.stdin.write(JSON.stringify(req) + "\n");
+
+  TypeScript Types (Optional)
+
+  - If you want fully generated TS types straight from the Rust protocol, use the generator (writes files to a directory you choose):
+      - cargo run -p codex-protocol-ts -- --out-dir <path/to/your/generated> [--prettier <path/to/prettier>]
+      - Then import from that directory instead of the ad‑hoc types in the sample.
+  - This mirrors codex-app-server-protocol models and ensures long‑term stability as fields evolve.
+
+  Integration Notes
+
+  - Call order: initialize → wait for response → send initialized → newConversation → addConversationListener → stream events.
+  - Notifications for Codex events arrive as method: "codex/event/<type>" with params containing the serialized core event and a
+  conversationId.
+  - You must answer every server request (execCommandApproval, applyPatchApproval) with a result: { decision } or the turn will stall.
+  - IDs can be numbers or strings; keep a simple incrementing counter per process.
+  - Use one long‑lived process; handle child exit and propagate failures to pending calls.
