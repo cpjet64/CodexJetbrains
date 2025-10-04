@@ -30,6 +30,7 @@ class CodexConfigService : PersistentStateComponent<CodexConfigService.State> {
         var autoStageAppliedChanges: Boolean = false,
         var autoOpenConsoleOnExec: Boolean = false,
         var consoleVisible: Boolean = false,
+        var showReasoning: Boolean = true,
         var lastUsedTool: String? = null,
         var lastUsedPrompt: String? = null,
         var customModels: MutableList<String> = mutableListOf()
@@ -113,6 +114,10 @@ class CodexConfigService : PersistentStateComponent<CodexConfigService.State> {
     var consoleVisible: Boolean
         get() = state.consoleVisible
         set(value) { state.consoleVisible = value }
+
+    var showReasoning: Boolean
+        get() = state.showReasoning
+        set(value) { state.showReasoning = value }
 
     var lastUsedTool: String?
         get() = state.lastUsedTool

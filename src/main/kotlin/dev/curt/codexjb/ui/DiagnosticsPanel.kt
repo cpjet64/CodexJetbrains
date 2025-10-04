@@ -6,14 +6,17 @@ import dev.curt.codexjb.core.DiagnosticsService
 import java.awt.BorderLayout
 import java.awt.Font
 import javax.swing.JButton
+import javax.swing.JCheckBox
 import javax.swing.JPanel
 import javax.swing.JTextArea
 import javax.swing.SwingUtilities
+import javax.swing.text.DefaultCaret
 
 class DiagnosticsPanel : JPanel(BorderLayout()) {
     private val textArea = JTextArea()
     private val copyButton = JButton("Copy")
     private val clearButton = JButton("Clear")
+    private val autoScrollCheck = JCheckBox("Autoscroll", true)
     private val listener: (List<String>) -> Unit = { lines -> updateText(lines) }
 
     init {
@@ -27,11 +30,15 @@ class DiagnosticsPanel : JPanel(BorderLayout()) {
         textArea.lineWrap = true
         textArea.wrapStyleWord = false // Don't break in middle of words for paths
 
+        // Always auto-scroll to the latest appended text
+        (textArea.caret as? DefaultCaret)?.updatePolicy = DefaultCaret.ALWAYS_UPDATE
+
         add(JBScrollPane(textArea), BorderLayout.CENTER)
 
         val buttons = JPanel().apply {
             add(copyButton)
             add(clearButton)
+            add(autoScrollCheck)
         }
         add(buttons, BorderLayout.SOUTH)
 
@@ -41,13 +48,25 @@ class DiagnosticsPanel : JPanel(BorderLayout()) {
             DiagnosticsService.clear()
         }
 
+        autoScrollCheck.addActionListener {
+            val caret = textArea.caret as? DefaultCaret
+            if (autoScrollCheck.isSelected) {
+                caret?.updatePolicy = DefaultCaret.ALWAYS_UPDATE
+                textArea.caretPosition = textArea.document.length
+            } else {
+                caret?.updatePolicy = DefaultCaret.NEVER_UPDATE
+            }
+        }
+
         DiagnosticsService.addListener(listener)
     }
 
     private fun updateText(lines: List<String>) {
         SwingUtilities.invokeLater {
             textArea.text = lines.joinToString(System.lineSeparator())
-            textArea.caretPosition = textArea.document.length
+            if (autoScrollCheck.isSelected) {
+                textArea.caretPosition = textArea.document.length
+            }
         }
     }
 

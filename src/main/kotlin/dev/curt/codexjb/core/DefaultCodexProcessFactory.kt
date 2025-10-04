@@ -11,6 +11,13 @@ class DefaultCodexProcessFactory : CodexProcessFactory {
             add(config.executable.toString())
             addAll(config.arguments)
         }
+
+        // Debug: Log the exact command being executed
+        DiagnosticsService.append("ProcessBuilder command list:")
+        command.forEachIndexed { idx, arg ->
+            DiagnosticsService.append("  [$idx] = \"$arg\"")
+        }
+
         val builder = ProcessBuilder(command)
         config.workingDirectory?.let { builder.directory(it.toFile()) }
         if (!config.inheritParentEnvironment) {
@@ -28,11 +35,12 @@ private class RealCodexProcess(
     private val process: Process
 ) : CodexProcessHandle {
 
+    private val outputStream = process.outputStream
     private val writer = BufferedWriter(
-        OutputStreamWriter(process.outputStream, StandardCharsets.UTF_8)
+        OutputStreamWriter(outputStream, StandardCharsets.UTF_8)
     )
 
-    override val stdin: AppendableProcessWriter = BufferedProcessWriter(writer)
+    override val stdin: AppendableProcessWriter = BufferedProcessWriter(writer, outputStream)
     override val stdout: ProcessStream = InputStreamAdapter(process.inputStream)
     override val stderr: ProcessStream = InputStreamAdapter(process.errorStream)
 
@@ -66,7 +74,8 @@ private class RealCodexProcess(
 }
 
 private class BufferedProcessWriter(
-    private val delegate: BufferedWriter
+    private val delegate: BufferedWriter,
+    private val outputStream: java.io.OutputStream
 ) : AppendableProcessWriter {
     override fun writeLine(line: String) {
         delegate.write(line)
@@ -80,6 +89,8 @@ private class BufferedProcessWriter(
     override fun close() {
         delegate.close()
     }
+
+    override fun asOutputStream(): java.io.OutputStream = outputStream
 }
 
 private class InputStreamAdapter(

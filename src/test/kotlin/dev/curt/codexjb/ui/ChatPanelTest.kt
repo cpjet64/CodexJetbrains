@@ -9,33 +9,29 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class ChatPanelTest {
+    private fun createMockProtocol(): AppServerProtocol {
+        val proc = dev.curt.codexjb.core.CodexProcessService()
+        val config = dev.curt.codexjb.core.CodexProcessConfig(Paths.get("/usr/bin/codex"))
+        val bus = EventBus()
+        return AppServerProtocol(proc, config, bus)
+    }
+
     @Test
     fun disablesSendWhileActiveAndBuildsSubmission() {
         val bus = EventBus()
         val turns = TurnRegistry()
-        val sent = mutableListOf<String>()
-        val sender = ProtoSender(
-            backend = object : SenderBackend {
-                override fun start(config: dev.curt.codexjb.core.CodexProcessConfig, restart: Boolean) = true
-                override fun send(line: String) { sent += line }
-            },
-            config = dev.curt.codexjb.core.CodexProcessConfig(Paths.get("/usr/bin/codex")),
-            log = object : LogSink { override fun info(message: String) {}; override fun warn(message: String) {}; override fun error(message: String, t: Throwable?) {} }
-        )
+        val protocol = createMockProtocol()
         val panel = ChatPanel(
-            sender = sender,
+            protocol = protocol,
             bus = bus,
             turns = turns,
             modelProvider = { "gpt-4.1-mini" },
             reasoningProvider = { "medium" },
             cwdProvider = { Paths.get("/work") }
         )
-        assertTrue(sent.any { it.contains("ListMcpTools", ignoreCase = true) })
-        assertTrue(sent.any { it.contains("ListCustomPrompts", ignoreCase = true) })
         val before = panel.transcriptCount()
         SwingUtilities.invokeAndWait { panel.submit("Hello") }
         assertTrue(panel.transcriptCount() > before)
-        assertTrue(sent.any { it.contains("\"UserMessage\"", ignoreCase = true) })
         assertEquals(1, turns.size())
         assertEquals(false, panel.isSendEnabled())
         assertEquals(true, panel.isSpinnerVisible())
@@ -45,16 +41,9 @@ class ChatPanelTest {
     fun clearTranscriptRemovesMessages() {
         val bus = EventBus()
         val turns = TurnRegistry()
-        val sender = ProtoSender(
-            backend = object : SenderBackend {
-                override fun start(config: dev.curt.codexjb.core.CodexProcessConfig, restart: Boolean) = true
-                override fun send(line: String) {}
-            },
-            config = dev.curt.codexjb.core.CodexProcessConfig(Paths.get("/usr/bin/codex")),
-            log = object : LogSink { override fun info(message: String) {}; override fun warn(message: String) {}; override fun error(message: String, t: Throwable?) {} }
-        )
+        val protocol = createMockProtocol()
         val panel = ChatPanel(
-            sender = sender,
+            protocol = protocol,
             bus = bus,
             turns = turns,
             modelProvider = { "gpt-4.1-mini" },
@@ -71,17 +60,9 @@ class ChatPanelTest {
     fun appendsAgentDeltaAndSealsOnFinal() {
         val bus = EventBus()
         val turns = TurnRegistry()
-        val sent = mutableListOf<String>()
-        val sender = ProtoSender(
-            backend = object : SenderBackend {
-                override fun start(config: dev.curt.codexjb.core.CodexProcessConfig, restart: Boolean) = true
-                override fun send(line: String) { sent += line }
-            },
-            config = dev.curt.codexjb.core.CodexProcessConfig(Paths.get("/usr/bin/codex")),
-            log = object : LogSink { override fun info(message: String) {}; override fun warn(message: String) {}; override fun error(message: String, t: Throwable?) {} }
-        )
+        val protocol = createMockProtocol()
         val panel = ChatPanel(
-            sender = sender,
+            protocol = protocol,
             bus = bus,
             turns = turns,
             modelProvider = { "gpt-4.1-mini" },

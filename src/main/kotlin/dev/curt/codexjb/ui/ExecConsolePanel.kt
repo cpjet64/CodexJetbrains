@@ -56,12 +56,27 @@ class ExecConsolePanel : JPanel(BorderLayout()) {
             val cmd = msg.get("command")?.asString ?: ""
             SwingUtilities.invokeLater { onBegin(id, cwd, cmd) }
         }
+        bus.addListener("exec_command_begin") { id, msg ->
+            val cwd = msg.get("cwd")?.asString ?: ""
+            val cmd = msg.get("command")?.asString ?: ""
+            SwingUtilities.invokeLater { onBegin(id, cwd, cmd) }
+        }
         bus.addListener("ExecCommandOutputDelta") { _, msg ->
             val chunk = msg.get("chunk")?.asString ?: ""
             if (chunk.isEmpty()) return@addListener
             SwingUtilities.invokeLater { onDelta(chunk) }
         }
+        bus.addListener("exec_command_output_delta") { _, msg ->
+            val chunk = msg.get("chunk")?.asString ?: ""
+            if (chunk.isEmpty()) return@addListener
+            SwingUtilities.invokeLater { onDelta(chunk) }
+        }
         bus.addListener("ExecCommandEnd") { _, msg ->
+            val code = msg.get("exit_code")?.asInt ?: 0
+            val dur = msg.get("duration_ms")?.asLong ?: 0L
+            SwingUtilities.invokeLater { onEnd(code, dur) }
+        }
+        bus.addListener("exec_command_end") { _, msg ->
             val code = msg.get("exit_code")?.asInt ?: 0
             val dur = msg.get("duration_ms")?.asLong ?: 0L
             SwingUtilities.invokeLater { onEnd(code, dur) }

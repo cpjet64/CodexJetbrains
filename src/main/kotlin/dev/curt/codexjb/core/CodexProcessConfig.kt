@@ -7,7 +7,7 @@ import java.nio.file.Path
  */
 data class CodexProcessConfig(
     val executable: Path,
-    val arguments: List<String> = listOf("proto"),
+    val arguments: List<String> = listOf("app-server"), // Use App Server protocol (JSON-RPC over stdio)
     val workingDirectory: Path? = null,
     val environment: Map<String, String> = emptyMap(),
     val inheritParentEnvironment: Boolean = true
@@ -40,6 +40,7 @@ interface AppendableProcessWriter {
     fun writeLine(line: String)
     fun flush()
     fun close()
+    fun asOutputStream(): java.io.OutputStream
 }
 
 /**

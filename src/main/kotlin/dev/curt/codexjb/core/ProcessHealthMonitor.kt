@@ -9,8 +9,8 @@ class ProcessHealthMonitor(
     private val service: CodexProcessService,
     private val config: CodexProcessConfig,
     private val diagnostics: LogSink = CodexLogger.forClass(ProcessHealthMonitor::class.java),
-    private val staleThresholdMs: Long = TimeUnit.SECONDS.toMillis(45),
-    private val checkIntervalMs: Long = TimeUnit.SECONDS.toMillis(15)
+    private val staleThresholdMs: Long = TimeUnit.MINUTES.toMillis(5),
+    private val checkIntervalMs: Long = TimeUnit.SECONDS.toMillis(30)
 ) : AutoCloseable {
 
     private val scheduler: ScheduledExecutorService = Executors.newSingleThreadScheduledExecutor {

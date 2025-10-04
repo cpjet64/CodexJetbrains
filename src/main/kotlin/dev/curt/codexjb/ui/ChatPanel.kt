@@ -42,7 +42,7 @@ private object ChatPalette {
 }
 
 class ChatPanel(
-    private val sender: ProtoSender,
+    private val protocol: AppServerProtocol,
     private val bus: EventBus,
     private val turns: TurnRegistry,
     private val project: Project? = null,
@@ -71,6 +71,8 @@ class ChatPanel(
     private val diffViews = mutableMapOf<String, JComponent>()
     private var activeTurnId: String? = null
     private var currentAgentArea: JTextArea? = null
+    private var currentReasoningArea: JTextArea? = null
+    private var currentReasoningPanel: JPanel? = null
     private var lastRefreshTime = 0L
     private val refreshDebounceMs = 1000L // 1 second debounce
     private var initialRequestsSent = false
@@ -272,6 +274,19 @@ class ChatPanel(
         input.wrapStyleWord = true
         input.toolTipText = "Ask Codex"
         input.accessibleContext.accessibleName = "Codex input"
+
+        // Key bindings: Enter to send, Shift+Enter for newline
+        run {
+            val im = input.getInputMap(JComponent.WHEN_FOCUSED)
+            val am = input.actionMap
+            im.put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ENTER, 0), "codex-send")
+            im.put(KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_ENTER, java.awt.event.InputEvent.SHIFT_DOWN_MASK), "insert-break")
+            am.put("codex-send", object : javax.swing.AbstractAction() {
+                override fun actionPerformed(e: ActionEvent) {
+                    onSend(e)
+                }
+            })
+        }
         send.addActionListener(this::onSend)
         send.toolTipText = "Send to Codex"
         send.accessibleContext.accessibleName = "Send"
@@ -296,21 +311,77 @@ class ChatPanel(
     }
 
     private fun registerListeners() {
-        registerBusListener("TurnDiff") { id, msg ->
+        // Listen for task_started to sync turn ID from server
+        registerBusListener("task_started") { id, _ ->
+            log.info("Task started with server turn ID: $id")
+            activeTurnId = id
+            SwingUtilities.invokeLater {
+                // Only prepare agent bubble if not already created
+                if (currentAgentArea == null) {
+                    prepareAgentBubble()
+                }
+            }
+        }
+
+        registerBusListener("TurnDiff", "turn_diff") { id, msg ->
             TurnMetricsService.onDiffStart(id)
             val diff = msg.get("diff")?.asString ?: msg.get("text")?.asString ?: return@registerBusListener
             SwingUtilities.invokeLater { showDiffPanel(id, diff) }
         }
-        registerBusListener("AgentMessageDelta") { id, msg ->
+        registerBusListener("AgentMessageDelta", "agent_message_delta") { id, msg ->
             TurnMetricsService.onStreamDelta(id)
             if (id != activeTurnId) return@registerBusListener
             val delta = msg.get("delta")?.asString ?: return@registerBusListener
-            SwingUtilities.invokeLater { appendAgentDelta(delta) }
+            SwingUtilities.invokeLater {
+                // Create agent bubble after reasoning (if we haven't created it yet)
+                if (currentAgentArea == null) {
+                    prepareAgentBubble()
+                }
+                appendAgentDelta(delta)
+            }
         }
-        registerBusListener("AgentMessage") { id, _ ->
+        registerBusListener("AgentMessage", "agent_message") { id, _ ->
             TurnMetricsService.onStreamComplete(id)
             if (id != activeTurnId) return@registerBusListener
             SwingUtilities.invokeLater { sealAgentMessage() }
+        }
+
+        // Listen for task_complete to finalize turn
+        registerBusListener("task_complete") { id, _ ->
+            log.info("Task completed for turn ID: $id")
+            SwingUtilities.invokeLater { setSending(false) }
+        }
+
+        // Listen for reasoning events
+        registerBusListener("agent_reasoning_section_break") { id, _ ->
+            if (id != activeTurnId) return@registerBusListener
+            val cfg = ApplicationManager.getApplication().getService(CodexConfigService::class.java)
+            if (!cfg.showReasoning) return@registerBusListener
+            SwingUtilities.invokeLater { appendReasoningDelta("\n\n") }
+        }
+
+        registerBusListener("agent_reasoning_delta") { id, msg ->
+            if (id != activeTurnId) return@registerBusListener
+            val delta = msg.get("delta")?.asString ?: return@registerBusListener
+            SwingUtilities.invokeLater {
+                // Always create reasoning bubble first (it will be collapsible)
+                if (currentReasoningArea == null) {
+                    prepareReasoningBubble()
+                }
+
+                val cfg = ApplicationManager.getApplication().getService(CodexConfigService::class.java)
+                if (cfg.showReasoning) {
+                    appendReasoningDelta(delta)
+                }
+            }
+        }
+
+        registerBusListener("agent_reasoning") { id, _ ->
+            if (id != activeTurnId) return@registerBusListener
+            val cfg = ApplicationManager.getApplication().getService(CodexConfigService::class.java)
+            if (!cfg.showReasoning) return@registerBusListener
+            // Final reasoning text - already assembled via deltas
+            log.info("Reasoning complete for turn $id")
         }
 
         registerBusListener(
@@ -344,8 +415,8 @@ class ChatPanel(
 
         registerBusListener("PatchApplyBegin") { id, _ -> TurnMetricsService.onApplyBegin(id) }
         registerBusListener("PatchApplyEnd") { id, _ -> TurnMetricsService.onApplyEnd(id) }
-        registerBusListener("ExecCommandBegin") { id, _ -> TurnMetricsService.onExecStart(id) }
-        registerBusListener("ExecCommandEnd") { id, _ -> TurnMetricsService.onExecEnd(id) }
+        registerBusListener("ExecCommandBegin", "exec_command_begin") { id, _ -> TurnMetricsService.onExecStart(id) }
+        registerBusListener("ExecCommandEnd", "exec_command_end") { id, _ -> TurnMetricsService.onExecEnd(id) }
 
         registerBusListener("SessionConfigured", "session_configured") { id, _ ->
             onSessionConfigured(id)
@@ -415,13 +486,10 @@ class ChatPanel(
         }
     }
 
-    private fun sendSubmission(type: String, configure: JsonObject.() -> Unit = {}) {
-        val body = JsonObject().apply {
-            addProperty("type", type)
-            configure()
-        }
-        val envelope = SubmissionEnvelope(Ids.newId(), "Submit", body)
-        sender.send(EnvelopeJson.encodeSubmission(envelope))
+    private fun sendOp(op: String) {
+        // TODO: Map old envelope ops to JSON-RPC methods
+        // For now, log a warning that this operation is not supported
+        log.warn("Operation '$op' not yet supported in JSON-RPC protocol")
     }
 
     private fun refreshTools() {
@@ -429,7 +497,7 @@ class ChatPanel(
             toolsList.model = DefaultListModel<String>().apply { addElement("Loading tools…") }
             toolsList.isEnabled = false
         }
-        sendSubmission("ListMcpTools")
+        sendOp("list_mcp_tools")
         log.info("Refreshing MCP tools...")
     }
 
@@ -438,7 +506,7 @@ class ChatPanel(
             promptsList.model = DefaultListModel<String>().apply { addElement("Loading prompts…") }
             promptsList.isEnabled = false
         }
-        sendSubmission("ListCustomPrompts")
+        sendOp("list_custom_prompts")
         log.info("Refreshing prompts...")
     }
 
@@ -447,9 +515,8 @@ class ChatPanel(
             log.warn("Attempted to run unknown MCP tool: $toolName")
             return
         }
-        sendSubmission("RunTool") {
-            addProperty("tool", toolName)
-        }
+        // TODO: Align with CLI op when available. For now, treat as user input hint.
+        sendUserInput("Please run MCP tool: $toolName")
         log.info("Running tool: $toolName")
 
         addUserMessage("Running tool: $toolName")
@@ -562,31 +629,42 @@ class ChatPanel(
 
     internal fun submitWithId(text: String, id: String) {
         if (send.isEnabled.not()) return
-        val model = modelProvider()
-        val effort = reasoningProvider()
         renderUserBubble(text)
-        prepareAgentBubble()
+        // Don't prepare agent bubble yet - wait for reasoning to come first
         setSending(true)
         turns.put(Turn(id))
         activeTurnId = id
         TurnMetricsService.onSubmission(id)
-        val sandbox = sandboxProvider()
-        sender.send(buildSubmission(id, text, model, effort, sandbox))
+
+        // Send message via JSON-RPC protocol
+        protocol.sendMessage(text)
+            .thenAccept {
+                log.info("Message sent successfully")
+            }
+            .exceptionally { error ->
+                log.error("Failed to send message: ${error.message}")
+                SwingUtilities.invokeLater {
+                    setSending(false)
+                    JOptionPane.showMessageDialog(
+                        this,
+                        "Failed to send message: ${error.message}",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE
+                    )
+                }
+                null
+            }
     }
 
-    private fun buildSubmission(id: String, text: String, model: String, effort: String, sandbox: String): String {
-        val body = JsonObject().apply {
-            addProperty("type", "UserMessage")
-            addProperty("text", text)
-            val ctx = OverrideTurnContext(
-                cwd = cwdProvider()?.toString(),
-                model = model,
-                effort = effort,
-                sandboxPolicy = sandbox
-            )
-            add("override", ctx.toJson())
-        }
-        return EnvelopeJson.encodeSubmission(SubmissionEnvelope(id, "Submit", body))
+    private fun sendUserInput(text: String) {
+        protocol.sendMessage(text)
+            .thenAccept {
+                log.info("Message sent successfully")
+            }
+            .exceptionally { error ->
+                log.error("Failed to send message: ${error.message}")
+                null
+            }
     }
 
     private fun addUserMessage(text: String) {
@@ -628,10 +706,73 @@ class ChatPanel(
         scrollToBottom()
     }
 
+    private fun prepareReasoningBubble() {
+        val cfg = ApplicationManager.getApplication().getService(CodexConfigService::class.java)
+
+        // Create collapsible panel with reasoning header
+        val panel = JPanel(BorderLayout())
+        panel.background = ChatPalette.toolCallBackground
+        panel.border = EmptyBorder(4, 8, 4, 8)
+
+        // Header with toggle button
+        val header = JPanel(BorderLayout())
+        header.background = ChatPalette.toolCallBackground
+
+        // Start collapsed or expanded based on user preference
+        val startExpanded = cfg.showReasoning
+        val toggleButton = JButton(if (startExpanded) "▼ 🧠 Reasoning" else "▶ 🧠 Reasoning")
+        toggleButton.isBorderPainted = false
+        toggleButton.isFocusPainted = false
+        toggleButton.isContentAreaFilled = false
+        toggleButton.foreground = ChatPalette.bubbleForeground
+        header.add(toggleButton, BorderLayout.WEST)
+
+        // Reasoning text area
+        val area = JTextArea(1, 40)
+        area.lineWrap = true
+        area.wrapStyleWord = true
+        area.isEditable = false
+        area.background = ChatPalette.toolCallBackground
+        area.foreground = ChatPalette.bubbleForeground
+        area.border = EmptyBorder(8, 8, 8, 8)
+
+        val scrollPane = JScrollPane(area)
+        scrollPane.border = null
+        scrollPane.viewport.background = ChatPalette.toolCallBackground
+        scrollPane.isVisible = startExpanded // Start collapsed if showReasoning is false
+
+        panel.add(header, BorderLayout.NORTH)
+        panel.add(scrollPane, BorderLayout.CENTER)
+
+        // Toggle collapse/expand
+        toggleButton.addActionListener {
+            val isVisible = scrollPane.isVisible
+            scrollPane.isVisible = !isVisible
+            toggleButton.text = if (isVisible) "▶ 🧠 Reasoning" else "▼ 🧠 Reasoning"
+            panel.revalidate()
+            scrollToBottom()
+        }
+
+        currentReasoningArea = area
+        currentReasoningPanel = panel
+        transcript.add(Box.createVerticalStrut(4))
+        transcript.add(panel)
+        transcript.revalidate()
+        scrollToBottom()
+    }
+
+    private fun appendReasoningDelta(delta: String) {
+        val area = currentReasoningArea ?: return
+        area.append(delta)
+        scrollToBottom()
+    }
+
     private fun sealAgentMessage() {
         setSending(false)
         activeTurnId = null
         currentAgentArea = null
+        currentReasoningArea = null
+        currentReasoningPanel = null
     }
 
     private fun setSending(active: Boolean) {

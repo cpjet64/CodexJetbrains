@@ -51,6 +51,7 @@ class ProcessHealthMonitorTest {
                     override fun writeLine(line: String) {}
                     override fun flush() {}
                     override fun close() {}
+                    override fun asOutputStream(): java.io.OutputStream = java.io.ByteArrayOutputStream()
                 }
                 override val stdout: ProcessStream = object : ProcessStream {
                     override fun asInputStream(): InputStream = InputStream.nullInputStream()

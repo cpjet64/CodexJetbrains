@@ -22,4 +22,3 @@ class DiagnosticsBuilderTest {
         assertTrue(s.contains("PATH: /usr/bin:/bin"))
     }
 }
-

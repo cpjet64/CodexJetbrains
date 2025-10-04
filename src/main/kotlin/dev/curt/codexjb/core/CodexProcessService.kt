@@ -60,5 +60,7 @@ class CodexProcessService(
         Pair(h.stdout.asInputStream(), h.stderr.asInputStream())
     }
 
+    fun currentHandle(): CodexProcessHandle? = lock.withLock { state?.handle }
+
     private data class ProcessState(val handle: CodexProcessHandle)
 }

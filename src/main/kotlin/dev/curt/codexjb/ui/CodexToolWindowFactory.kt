@@ -37,6 +37,13 @@ class CodexToolWindowFactory : ToolWindowFactory {
     val sessionState = SessionState(log)
     bus.addListener("session_configured") { id, msg -> sessionState.onEvent(id, msg) }
 
+    // Listen for error events from app-server
+    bus.addListener("error") { _, msg ->
+      val errorMessage = msg.get("message")?.asString ?: "Unknown error"
+      DiagnosticsService.append("App Server Error: $errorMessage")
+      log.warn("App server error: $errorMessage")
+    }
+
     // Create diagnostics panel FIRST so it's always available
     val contentFactory = ContentFactory.getInstance()
     val diagnosticsPanel = DiagnosticsPanel()
@@ -57,7 +64,7 @@ class CodexToolWindowFactory : ToolWindowFactory {
     }
     val pathVar = env[pathKey] ?: env["PATH"] ?: env["Path"]
     if (pathVar != null) {
-      DiagnosticsService.append("$pathKey=$pathVar")
+      // Only show the broken-down PATH entries to reduce noise
       DiagnosticsService.append("$pathKey (broken down):")
       val sep = if (EnvironmentInfo.os == OperatingSystem.WINDOWS) ';' else ':'
       pathVar.split(sep).forEachIndexed { idx, dir ->
@@ -71,7 +78,7 @@ class CodexToolWindowFactory : ToolWindowFactory {
     if (EnvironmentInfo.os == OperatingSystem.WINDOWS) {
       val pathExt = env["PATHEXT"]
       if (pathExt != null) {
-        DiagnosticsService.append("PATHEXT=$pathExt")
+        // Only show the broken-down PATHEXT entries to reduce noise
         DiagnosticsService.append("PATHEXT (broken down):")
         pathExt.split(';').forEachIndexed { idx, ext ->
           DiagnosticsService.append("  [$idx] $ext")
@@ -245,7 +252,105 @@ class CodexToolWindowFactory : ToolWindowFactory {
         " | wsl_preference=" + effectiveSettings.useWsl +
         (project.basePath?.let { " | project_base=\"$it\"" } ?: "")
     )
-    val baseConfig = CodexProcessConfig(executable = exe)
+
+    // Show loading panel while version check runs
+    val loadingPanel = JLabel("<html><center>Checking Codex CLI version...<br>Please wait...</center></html>")
+    loadingPanel.horizontalAlignment = JLabel.CENTER
+    val loadingContent = contentFactory.createContent(loadingPanel, "Chat", false)
+    toolWindow.contentManager.addContent(loadingContent)
+
+    // Check Codex CLI version BEFORE transforming the config (must use original exe, not node.exe)
+    DiagnosticsService.append("Checking Codex CLI version (async)...")
+    CodexVersionCheck.checkAppServerSupport(exe).thenAccept { (isSupported, installedVersion) ->
+      // Remove loading panel
+      SwingUtilities.invokeLater {
+        toolWindow.contentManager.removeContent(loadingContent, true)
+      }
+
+      if (!isSupported) {
+        val versionMsg = installedVersion?.let { "version $it" } ?: "unknown version"
+        val errorMsg = """
+          Codex CLI $versionMsg does not support app-server protocol.
+
+          Please update to version 0.44.0 or later:
+          npm install -g @openai/codex@latest
+        """.trimIndent()
+
+        DiagnosticsService.append("ERROR: $errorMsg")
+        log.error(errorMsg)
+
+        SwingUtilities.invokeLater {
+          val content = contentFactory.createContent(
+            JLabel("<html>${errorMsg.replace("\n", "<br>")}</html>"),
+            "Chat",
+            false
+          )
+          toolWindow.contentManager.addContent(content)
+        }
+        return@thenAccept
+      }
+
+      // Continue with initialization on EDT
+      SwingUtilities.invokeLater {
+        initializeToolWindow(
+          project, toolWindow, exe, effectiveSettings,
+          contentFactory, bus, turns, cfg, proc, log
+        )
+      }
+    }.exceptionally { e ->
+      val actualException = if (e is java.util.concurrent.CompletionException) e.cause ?: e else e
+
+      when (actualException) {
+        is java.util.concurrent.TimeoutException -> {
+          DiagnosticsService.append("ERROR: Version check timed out after 15 seconds")
+          log.error("Version check timed out", actualException)
+
+          SwingUtilities.invokeLater {
+            toolWindow.contentManager.removeContent(loadingContent, true)
+            val content = contentFactory.createContent(
+              JLabel("<html>Version check timed out.<br>The 'codex --version' command did not respond.<br>Check Diagnostics panel for details.</html>"),
+              "Chat",
+              false
+            )
+            toolWindow.contentManager.addContent(content)
+          }
+        }
+        else -> {
+          DiagnosticsService.append("ERROR: Version check failed: ${actualException.message}")
+          log.error("Version check failed", actualException)
+
+          SwingUtilities.invokeLater {
+            toolWindow.contentManager.removeContent(loadingContent, true)
+            val content = contentFactory.createContent(
+              JLabel("<html>Version check failed: ${actualException.message ?: "unknown error"}<br>Check Diagnostics panel for details.</html>"),
+              "Chat",
+              false
+            )
+            toolWindow.contentManager.addContent(content)
+          }
+        }
+      }
+      null
+    }
+  }
+
+  private fun initializeToolWindow(
+    project: Project,
+    toolWindow: ToolWindow,
+    exe: Path,
+    effectiveSettings: EffectiveSettings,
+    contentFactory: ContentFactory,
+    bus: EventBus,
+    turns: TurnRegistry,
+    cfg: CodexConfigService,
+    proc: CodexProcessService,
+    log: LogSink
+  ) {
+    val projectDir = project.basePath?.let { Path.of(it) }
+    val baseConfig = CodexProcessConfig(
+        executable = exe,
+        workingDirectory = projectDir
+    )
     val useWsl = effectiveSettings.useWsl && EnvironmentInfo.os == OperatingSystem.WINDOWS
 
     // PowerShell scripts (.ps1) are npm launcher wrappers that call node.exe
@@ -262,15 +367,13 @@ class CodexToolWindowFactory : ToolWindowFactory {
         inheritParentEnvironment = baseConfig.inheritParentEnvironment
       )
       isPowerShellScript && EnvironmentInfo.os == OperatingSystem.WINDOWS -> {
-        // Extract the actual node.exe command from the PowerShell wrapper
-        // PowerShell launchers follow the pattern: node.exe path/to/script.js $args
-        val scriptDir = exe.parent
-        val nodeExe = scriptDir?.resolve("node.exe") ?: Path.of("node.exe")
-        val jsScript = scriptDir?.resolve("node_modules/@openai/codex/bin/codex.js")
+        // Try to bypass PowerShell wrapper for better performance
+        // This works with all node installation methods (NVM, fnm, Volta, Scoop, Chocolatey, standard installer)
+        val nodeExe = ExecutableDiscovery.findNode()
+        val jsScript = ExecutableDiscovery.findCodexScript(exe)
 
-        if (jsScript != null && jsScript.exists()) {
-          DiagnosticsService.append("DEBUG: Bypassing .ps1 wrapper, calling node.exe directly")
-          DiagnosticsService.append("DEBUG: node: $nodeExe, script: $jsScript")
+        if (nodeExe != null && jsScript != null) {
+          DiagnosticsService.append("Bypassing .ps1 wrapper: node=$nodeExe, script=$jsScript")
           CodexProcessConfig(
             executable = nodeExe,
             arguments = listOf(jsScript.toString()) + baseConfig.arguments,
@@ -279,7 +382,7 @@ class CodexToolWindowFactory : ToolWindowFactory {
             inheritParentEnvironment = baseConfig.inheritParentEnvironment
           )
         } else {
-          DiagnosticsService.append("WARN: Could not find codex.js, falling back to PowerShell wrapper")
+          DiagnosticsService.append("Using PowerShell wrapper for .ps1 script (node=${nodeExe != null}, script=${jsScript != null})")
           CodexProcessConfig(
             executable = Path.of("powershell.exe"),
             arguments = listOf("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", exe.toString()) + baseConfig.arguments,
@@ -292,41 +395,11 @@ class CodexToolWindowFactory : ToolWindowFactory {
       else -> baseConfig
     }
 
-    // Start process
+    // Note: Process is started by AppServerProtocol.start()
     DiagnosticsService.append("Starting Codex CLI with shell: ${processConfig.executable}")
     DiagnosticsService.append("Full command: ${processConfig.executable} ${processConfig.arguments.joinToString(" ")}")
-    proc.start(processConfig)
-    DiagnosticsService.append("Process started, checking if running: ${proc.isRunning()}")
-    val (stdoutThread, stderrThread) = attachReader(proc, bus, log)
 
-    // Wait for CLI to initialize (session_configured message)
-    // Note: Timeout must account for MCP server startup time (can take 10+ seconds)
-    val initialized = java.util.concurrent.CountDownLatch(1)
-    val initTimeoutMs = 20000L  // 20 seconds to allow for MCP server initialization
-
-    bus.addListener("session_configured") { _, _ ->
-      initialized.countDown()
-    }
-
-    // Block briefly to wait for initialization
-    val ready = kotlin.runCatching {
-      initialized.await(initTimeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS)
-    }.getOrDefault(false)
-
-    if (!ready) {
-      DiagnosticsService.append("ERROR: Codex CLI did not respond within ${initTimeoutMs}ms")
-      log.error("Codex CLI initialization timeout")
-      val content = contentFactory.createContent(
-          JLabel("<html>Codex CLI failed to initialize.<br>Check Diagnostics panel for details.</html>"),
-          "Chat",
-          false
-        )
-      toolWindow.contentManager.addContent(content)
-      return
-    }
-
-    DiagnosticsService.append("Codex CLI initialized successfully")
-
+    DiagnosticsService.append("Building UI components...")
     val models = cfg.availableModels.toTypedArray()
     val sandboxOptions = CodexSettingsOptions.SANDBOX_POLICIES.toTypedArray()
     val approvalLevels = CodexSettingsOptions.APPROVAL_LEVELS.toTypedArray()
@@ -462,18 +535,107 @@ class CodexToolWindowFactory : ToolWindowFactory {
     val processMonitor = ProcessHealthMonitor(proc, processConfig)
     processMonitor.start()
 
-    val sender = ProtoSender(
-      backend = ServiceBackend(proc),
-      config = processConfig,
-      log = log,
-      onReconnect = { infoBanner.show("Reconnected to Codex CLI") }
+    DiagnosticsService.append("Creating AppServerProtocol...")
+    // Initialize AppServerProtocol
+    val protocol = AppServerProtocol(
+      processService = proc,
+      processConfig = processConfig,
+      eventBus = bus
     )
-    val heartbeat = HeartbeatScheduler(
-      sendHeartbeat = { sender.send(Heartbeat.buildPingSubmission()) },
-      log = log
-    )
-    sender.setOnSendListener { heartbeat.markActivity() }
-    heartbeat.start()
+
+    // Show initializing panel
+    val initializingPanel = JLabel("<html><center>Initializing Codex protocol...<br>Please wait...</center></html>")
+    initializingPanel.horizontalAlignment = JLabel.CENTER
+    val initializingContent = contentFactory.createContent(initializingPanel, "Chat", false)
+    toolWindow.contentManager.addContent(initializingContent)
+
+    DiagnosticsService.append("Starting protocol initialization (async)...")
+    // Start protocol asynchronously
+    val protocolFuture = try {
+      protocol.start()
+    } catch (e: Exception) {
+      DiagnosticsService.append("ERROR: Failed to start protocol: ${e.javaClass.simpleName}: ${e.message ?: "unknown error"}")
+      DiagnosticsService.append("Stack trace: ${e.stackTraceToString()}")
+      log.error("Protocol start failed", e)
+      SwingUtilities.invokeLater {
+        toolWindow.contentManager.removeContent(initializingContent, true)
+        val content = contentFactory.createContent(
+          JLabel("<html>Failed to start protocol: ${e.message ?: "unknown error"}<br>Check Diagnostics panel for details.</html>"),
+          "Chat",
+          false
+        )
+        toolWindow.contentManager.addContent(content)
+      }
+      return
+    }
+
+    // Handle protocol initialization asynchronously (30 second timeout)
+    protocolFuture
+      .orTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+      .thenAccept { conversationId ->
+        DiagnosticsService.append("Protocol initialized with conversation ID: $conversationId")
+
+        // Build the UI on EDT
+        SwingUtilities.invokeLater {
+          toolWindow.contentManager.removeContent(initializingContent, true)
+          buildChatUI(
+            project, toolWindow, protocol, bus, turns, cfg,
+            effectiveSettings, contentFactory, infoBanner, processMonitor,
+            header, modelCombo, reasoningCombo, sandboxCombo
+          )
+        }
+      }
+      .exceptionally { e ->
+        val actualException = if (e is java.util.concurrent.CompletionException) e.cause ?: e else e
+
+        when (actualException) {
+          is java.util.concurrent.TimeoutException -> {
+            DiagnosticsService.append("ERROR: Protocol initialization timed out after 30 seconds")
+            log.error("Protocol initialization timed out", actualException)
+            SwingUtilities.invokeLater {
+              toolWindow.contentManager.removeContent(initializingContent, true)
+              val content = contentFactory.createContent(
+                JLabel("<html>Protocol initialization timed out.<br>Check Diagnostics panel for details.</html>"),
+                "Chat",
+                false
+              )
+              toolWindow.contentManager.addContent(content)
+            }
+          }
+          else -> {
+            DiagnosticsService.append("ERROR: Failed to initialize protocol: ${actualException.javaClass.simpleName}: ${actualException.message ?: "unknown error"}")
+            log.error("Protocol initialization failed", actualException)
+            SwingUtilities.invokeLater {
+              toolWindow.contentManager.removeContent(initializingContent, true)
+              val content = contentFactory.createContent(
+                JLabel("<html>Failed to initialize protocol: ${actualException.message ?: "unknown error"}<br>Check Diagnostics panel for details.</html>"),
+                "Chat",
+                false
+              )
+              toolWindow.contentManager.addContent(content)
+            }
+          }
+        }
+        null
+      }
+  }
+
+  private fun buildChatUI(
+    project: Project,
+    toolWindow: ToolWindow,
+    protocol: AppServerProtocol,
+    bus: EventBus,
+    turns: TurnRegistry,
+    cfg: CodexConfigService,
+    effectiveSettings: EffectiveSettings,
+    contentFactory: ContentFactory,
+    infoBanner: InfoBanner,
+    processMonitor: ProcessHealthMonitor,
+    header: JPanel,
+    modelCombo: JComboBox<String>,
+    reasoningCombo: JComboBox<String>,
+    sandboxCombo: JComboBox<*>
+  ) {
     val panel = JPanel(BorderLayout())
     val errorBanner = ErrorBanner().apply { wire(bus) }
     val top = JPanel()
@@ -483,7 +645,7 @@ class CodexToolWindowFactory : ToolWindowFactory {
     top.add(header)
     panel.add(top, BorderLayout.NORTH)
     val chat = ChatPanel(
-      sender = sender,
+      protocol = protocol,
       bus = bus,
       turns = turns,
       project = project,
@@ -506,17 +668,8 @@ class CodexToolWindowFactory : ToolWindowFactory {
     val content = contentFactory.createContent(panel, "Chat", false)
     content.setDisposer(object : Disposable {
       override fun dispose() {
-        sender.setOnSendListener(null)
-        heartbeat.dispose()
         processMonitor.close()
-
-        // Interrupt reader threads to ensure clean shutdown
-        stdoutThread.interrupt()
-        stderrThread.interrupt()
-
-        // Wait briefly for threads to exit
-        kotlin.runCatching { stdoutThread.join(1000) }
-        kotlin.runCatching { stderrThread.join(1000) }
+        protocol.stop()
       }
     })
     toolWindow.contentManager.addContent(content)
@@ -525,44 +678,10 @@ class CodexToolWindowFactory : ToolWindowFactory {
       SwingUtilities.invokeLater { toolWindow.show(null) }
     }
 
-    val store = ApprovalStore()
-    val approvals = ApprovalsController(
-      modeProvider = { (approvalCombo.selectedItem as CodexSettingsOptions.ApprovalLevelOption).mode },
-      store = store,
-      onDecision = {
-        val body = it.getAsJsonObject("body")
-        if (body.get("type")?.asString == "ExecApprovalDecision") {
-          val status = if (body.get("allow")?.asBoolean == true) "APPROVED" else "DENIED"
-          SwingUtilities.invokeLater { consolePanel.setApprovalStatus(status) }
-        }
-        sender.send(it.toString())
-      },
-      log = log,
-      prompt = { title, message ->
-        javax.swing.JOptionPane.showConfirmDialog(
-          panel,
-          message,
-          title,
-          javax.swing.JOptionPane.YES_NO_OPTION
-        ) == javax.swing.JOptionPane.YES_OPTION
-      },
-      promptRationale = { title, message ->
-        javax.swing.JOptionPane.showInputDialog(
-          panel,
-          message,
-          title,
-          javax.swing.JOptionPane.PLAIN_MESSAGE,
-          null,
-          null,
-          ""
-        )?.toString()
-      }
-    )
-    approvals.wire(bus)
+    // TODO: Implement approval handling with JSON-RPC protocol
+    // Approvals are now handled server-side via AppServerClient approval handlers
 
-    val resetBtn = javax.swing.JButton("Reset approvals")
-    resetBtn.addActionListener { store.reset() }
-    header.add(resetBtn)
+    // TODO: Add reset approvals button back when approval handling is implemented
 
     // Session header and token usage indicators
     val sessionLabel = JLabel("")
@@ -571,6 +690,9 @@ class CodexToolWindowFactory : ToolWindowFactory {
     val usageLabel = JLabel("")
     usageLabel.foreground = java.awt.Color(0x55, 0x55, 0x55)
     header.add(usageLabel)
+    val pathLabel = JLabel("")
+    pathLabel.foreground = java.awt.Color(0x55, 0x55, 0x55)
+    header.add(pathLabel)
 
     bus.addListener("session_configured") { _, msg ->
       val m = msg.get("model")?.asString
@@ -587,10 +709,26 @@ class CodexToolWindowFactory : ToolWindowFactory {
       usageLabel.text = "Tokens: in=$input out=$output total=$total"
       TurnMetricsService.onTokenCount(id, total)
     }
+    bus.addListener("token_count") { id, msg ->
+      val input = msg.get("input")?.asInt ?: 0
+      val output = msg.get("output")?.asInt ?: 0
+      val total = msg.get("total")?.asInt ?: (input + output)
+      usageLabel.text = "Tokens: in=$input out=$output total=$total"
+      TurnMetricsService.onTokenCount(id, total)
+    }
+
+    // Conversation path updates (heartbeat response)
+    bus.addListener("conversation_path") { _, msg ->
+      val path = msg.get("path")?.asString ?: return@addListener
+      val convId = msg.get("conversation_id")?.asString
+      SwingUtilities.invokeLater {
+        pathLabel.text = if (convId.isNullOrBlank()) "Path: $path" else "Path: $path  |  Conv: $convId"
+      }
+    }
 
     consolePanel.setCancelHandler { execId ->
-      sender.send(buildCancelExecSubmission(execId))
-      infoBanner.show("Cancel request sent for exec command")
+      protocol.interrupt()
+      infoBanner.show("Cancel request sent")
     }
 
     val consoleToggle = JToggleButton("Console").apply {
@@ -612,6 +750,14 @@ class CodexToolWindowFactory : ToolWindowFactory {
       accessibleContext.accessibleName = "Auto-open exec console"
     }
     header.add(autoOpenConsoleCheck)
+
+    val showReasoningCheck = JCheckBox("Show reasoning").apply {
+      isSelected = cfg.showReasoning
+      addActionListener { cfg.showReasoning = isSelected }
+      accessibleContext.accessibleName = "Show reasoning traces"
+      toolTipText = "Show model reasoning traces inline with chat responses"
+    }
+    header.add(showReasoningCheck)
 
     val ensureConsoleVisible = {
       if (!consoleWrapper.isVisible) {
@@ -640,67 +786,7 @@ class CodexToolWindowFactory : ToolWindowFactory {
     }
   }
 
-  private fun attachReader(
-    service: CodexProcessService,
-    bus: EventBus,
-    log: LogSink
-  ): Pair<Thread, Thread> {
-    val streams = service.streams() ?: return Pair(Thread(), Thread())
-    val stdout = streams.first.bufferedReader(Charsets.UTF_8)
-    val stderr = streams.second.bufferedReader(Charsets.UTF_8)
 
-    val stdoutThread = Thread {
-      try {
-        DiagnosticsService.append("DEBUG: stdout reader thread started")
-        while (true) {
-          val line = stdout.readLine() ?: break
-          DiagnosticsService.append("DEBUG: stdout received: ${line.take(100)}")
-          ProcessHealth.onStdout()
-          CodexStatusBarController.updateHealth(ProcessHealth.Status.OK)
-          bus.dispatch(line)
-        }
-        DiagnosticsService.append("DEBUG: stdout reader thread ended (EOF)")
-      } catch (t: Throwable) {
-        if (t is InterruptedException) {
-          log.info("stdout reader interrupted (expected on shutdown)")
-        } else {
-          log.warn("stdout reader ended: ${t.message}")
-          DiagnosticsService.append("DEBUG: stdout reader error: ${t.message}")
-        }
-      }
-    }.apply { isDaemon = true; name = "codex-proto-stdout" }
-
-    val stderrThread = Thread {
-      try {
-        DiagnosticsService.append("DEBUG: stderr reader thread started")
-        while (true) {
-          val line = stderr.readLine() ?: break
-          DiagnosticsService.append(line)
-        }
-        DiagnosticsService.append("DEBUG: stderr reader thread ended (EOF)")
-      } catch (t: Throwable) {
-        if (t is InterruptedException) {
-          log.info("stderr reader interrupted (expected on shutdown)")
-        } else {
-          log.warn("stderr reader ended: ${t.message}")
-          DiagnosticsService.append("DEBUG: stderr reader error: ${t.message}")
-        }
-      }
-    }.apply { isDaemon = true; name = "codex-proto-stderr" }
-
-    stdoutThread.start()
-    stderrThread.start()
-
-    return Pair(stdoutThread, stderrThread)
-  }
-
-  private fun buildCancelExecSubmission(execId: String): String {
-    val body = JsonObject().apply {
-      addProperty("type", "CancelExecCommand")
-      addProperty("exec_id", execId)
-    }
-    return EnvelopeJson.encodeSubmission(SubmissionEnvelope(Ids.newId(), "Submit", body))
-  }
 }
 
 

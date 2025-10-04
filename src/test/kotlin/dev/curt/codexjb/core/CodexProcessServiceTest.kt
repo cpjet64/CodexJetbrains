@@ -139,6 +139,10 @@ private class RecordingWriter : AppendableProcessWriter {
     override fun close() {
         closed = true
     }
+
+    override fun asOutputStream(): java.io.OutputStream {
+        return java.io.ByteArrayOutputStream()
+    }
 }
 
 private class StaticStream : ProcessStream {
