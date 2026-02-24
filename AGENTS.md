@@ -284,7 +284,7 @@ Plugin metadata in `src/main/resources/META-INF/plugin.xml`:
 ## Environment
 
 ### Cache Locations
-All package manager caches are consolidated under `C:\Dev\cache\`:
+All caches are centralized under `C:\Dev\cache\`. These environment variables are set system-wide — do not override them in project config or scripts.
 
 | Cache | Path | Env Variable |
 |---|---|---|
@@ -293,10 +293,14 @@ All package manager caches are consolidated under `C:\Dev\cache\`:
 | sccache | `C:\Dev\cache\sccache` | `SCCACHE_DIR` |
 | npm | `C:\Dev\cache\npm` | `npm_config_cache` |
 | pnpm store | `C:\Dev\cache\pnpm-store` | pnpm config |
+| Yarn | `C:\Dev\cache\yarn` | `YARN_CACHE_FOLDER` |
 | pip | `C:\Dev\cache\pip` | `PIP_CACHE_DIR` |
 | uv | `C:\Dev\cache\uv` | `UV_CACHE_DIR` |
 | NuGet | `C:\Dev\cache\nuget` | `NUGET_PACKAGES` |
-| Yarn | `C:\Dev\cache\yarn` | `YARN_CACHE_FOLDER` |
+
+
+#### General Cache Rules
+- **Do NOT** create local cache directories (`.cargo-home/`, `.npm-cache/`, `.pip-cache/`, etc.) — global env vars point all tools to the centralized cache.
 
 ### Agent Temp Directory
 If you need a temporary working directory, use `C:\Dev\agent-temp`. Do NOT use system temp or create temp dirs inside the project.
