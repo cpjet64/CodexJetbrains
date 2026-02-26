@@ -40,7 +40,7 @@ Legend:
 - [ ] F3.1 Close remaining TODO tracker gaps.
 - [ ] F3.2 Expand tests for reconnect, approvals, diff apply, MCP flows.
 - [x] F3.3 Run clean-checkout `./gradlew test` and log outcome.
-- [ ] F3.4 Add targeted UI tests (icon presence and ToolWindow default state).
+- [x] F3.4 Add targeted UI tests (icon presence and ToolWindow default state).
 - [x] F3.5 Review CI release gates.
 - [ ] F3.6 Define publish workflow or document manual release.
 - [ ] F3.7 Capture baseline performance metrics.

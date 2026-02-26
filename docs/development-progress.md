@@ -11,7 +11,8 @@
 - [x] Phase E backlog normalization (M1) completed.
 - [x] Phase F next implementation batch (F3.5 CI review) completed.
 - [x] Phase G next implementation batch (F3.3 full test + run log) completed.
-- [ ] Phase H next implementation batch (remaining M3/M4) pending.
+- [x] Phase H next implementation batch (F3.4 targeted UI tests) completed.
+- [ ] Phase I next implementation batch (remaining M3/M4) pending.
 
 ### Completed Batch
 
@@ -29,3 +30,4 @@
 - SSOT model enforced: `TODO_JetBrains.md` is primary; `todo-final.md` is mirror.
 - CI workflow hardened for release validation and diagnostics artifact collection.
 - Full test run log captured: `docs/test-runs/gradlew-test-2026-02-26.log`.
+- Added targeted UI tests for icon presence and default chat/toolwindow idle state.

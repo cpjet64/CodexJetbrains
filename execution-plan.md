@@ -113,3 +113,11 @@ Changes:
 - Executed full `./gradlew test` on JDK 21.
 - Stored run output at `docs/test-runs/gradlew-test-2026-02-26.log`.
 - Marked `F3.3` complete in `TODO_JetBrains.md` and `masterchecklist.md`.
+
+### Batch: F3.4 targeted UI tests (complete)
+
+Changes:
+- Added `PluginResourcesTest` to verify plugin icon files exist and are non-empty.
+- Added `ChatPanelTest.startsInIdleDefaultState` to cover default toolwindow/chat idle state.
+- Executed focused test run for `ChatPanelTest` and `PluginResourcesTest`.
+- Marked `F3.4` complete in `TODO_JetBrains.md` and `masterchecklist.md`.

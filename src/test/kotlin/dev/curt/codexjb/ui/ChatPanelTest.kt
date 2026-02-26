@@ -5,6 +5,7 @@ import dev.curt.codexjb.proto.*
 import java.nio.file.Paths
 import javax.swing.SwingUtilities
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -80,6 +81,22 @@ class ChatPanelTest {
         bus.dispatch(delta)
         bus.dispatch(fin)
         assertEquals(1, turns.size())
+    }
+
+    @Test
+    fun startsInIdleDefaultState() {
+        val panel = ChatPanel(
+            protocol = createMockProtocol(),
+            bus = EventBus(),
+            turns = TurnRegistry(),
+            modelProvider = { "gpt-4.1-mini" },
+            reasoningProvider = { "medium" },
+            cwdProvider = { Paths.get("/work") }
+        )
+
+        assertTrue(panel.isSendEnabled())
+        assertFalse(panel.isSpinnerVisible())
+        assertEquals(0, panel.transcriptCount())
     }
 }
 
