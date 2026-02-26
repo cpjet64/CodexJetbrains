@@ -19,6 +19,7 @@ import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
+import java.awt.Font
 import java.awt.Graphics
 import java.awt.Graphics2D
 import java.awt.RenderingHints
@@ -27,6 +28,9 @@ import java.awt.FlowLayout
 import java.nio.file.Path
 import javax.swing.*
 import javax.swing.border.EmptyBorder
+import javax.swing.border.LineBorder
+import javax.swing.event.DocumentEvent
+import javax.swing.event.DocumentListener
 
 
 private object ChatPalette {
@@ -40,8 +44,8 @@ private object ChatPalette {
         get() = UIUtil.getLabelForeground()
 
     val toolCallBackground: Color = bubbleColor("Codex.Chat.ToolCall.background", 0xF0F6FF, 0x1F2A3C)
-    val userBubbleBackground: Color = bubbleColor("Codex.Chat.UserBubble.background", 0xE8F0FE, 0x2A364C)
-    val agentBubbleBackground: Color = bubbleColor("Codex.Chat.AgentBubble.background", 0xF1F3F4, 0x3A3F46)
+    val userBubbleBackground: Color = bubbleColor("Codex.Chat.UserBubble.background", 0xDCE8FC, 0x263A52)
+    val agentBubbleBackground: Color = bubbleColor("Codex.Chat.AgentBubble.background", 0xEEF0F2, 0x34393F)
 }
 
 class ChatPanel(
@@ -84,7 +88,7 @@ class ChatPanel(
 
     init {
         transcript.layout = BoxLayout(transcript, BoxLayout.Y_AXIS)
-        transcript.border = EmptyBorder(8, 8, 8, 8)
+        transcript.border = EmptyBorder(12, 12, 12, 12)
         transcript.background = ChatPalette.panelBackground
         scroll.viewport.background = ChatPalette.panelBackground
         scroll.verticalScrollBar.unitIncrement = 16
@@ -271,12 +275,51 @@ class ChatPanel(
     }
 
     private fun buildFooter(): JComponent {
-        val panel = JPanel(BorderLayout())
-        val controls = JPanel()
+        val footer = JPanel()
+        footer.layout = BoxLayout(footer, BoxLayout.Y_AXIS)
+
+        // Row 1: Thin full-width streaming indicator
+        spinner.preferredSize = Dimension(Int.MAX_VALUE, 2)
+        spinner.maximumSize = Dimension(Int.MAX_VALUE, 2)
+        spinner.alignmentX = Component.LEFT_ALIGNMENT
+        footer.add(spinner)
+
+        // Row 2: Input area with watermark + buttons
+        val inputRow = JPanel(BorderLayout())
+        inputRow.alignmentX = Component.LEFT_ALIGNMENT
+
         input.lineWrap = true
         input.wrapStyleWord = true
         input.toolTipText = "Ask Codex"
         input.accessibleContext.accessibleName = "Codex input"
+        input.font = CodexTheme.bodyFont
+
+        // Watermark overlay
+        val watermark = JLabel("Type a message...")
+        watermark.foreground = CodexTheme.mutedLabelFg
+        watermark.font = CodexTheme.bodyFont
+        watermark.border = EmptyBorder(4, 6, 0, 0)
+        watermark.isVisible = input.text.isEmpty()
+
+        input.document.addDocumentListener(object : DocumentListener {
+            override fun insertUpdate(e: DocumentEvent) { watermark.isVisible = input.text.isEmpty() }
+            override fun removeUpdate(e: DocumentEvent) { watermark.isVisible = input.text.isEmpty() }
+            override fun changedUpdate(e: DocumentEvent) { watermark.isVisible = input.text.isEmpty() }
+        })
+
+        // Layer watermark over input using OverlayLayout
+        val inputContainer = JPanel()
+        inputContainer.layout = OverlayLayout(inputContainer)
+        val watermarkWrapper = JPanel(BorderLayout())
+        watermarkWrapper.isOpaque = false
+        watermarkWrapper.add(watermark, BorderLayout.NORTH)
+        inputContainer.add(watermarkWrapper)
+        val inputScroll = JScrollPane(input)
+        inputScroll.border = BorderFactory.createCompoundBorder(
+            LineBorder(CodexTheme.secondaryLabelFg, 1, true),
+            EmptyBorder(2, 4, 2, 4)
+        )
+        inputContainer.add(inputScroll)
 
         // Key bindings: Enter to send, Shift+Enter for newline
         run {
@@ -290,9 +333,12 @@ class ChatPanel(
                 }
             })
         }
+
         send.addActionListener(this::onSend)
         send.toolTipText = "Send to Codex"
         send.accessibleContext.accessibleName = "Send"
+        send.font = CodexTheme.bodyFont
+
         clear.addActionListener {
             val res = JOptionPane.showConfirmDialog(
                 this,
@@ -303,14 +349,25 @@ class ChatPanel(
             if (res == JOptionPane.YES_OPTION) clearTranscript()
         }
         clear.toolTipText = "Clear chat"
-        controls.add(send)
-        controls.add(spinner)
-        controls.add(clear)
+        clear.font = CodexTheme.secondaryFont
+
         spinner.accessibleContext.accessibleName = "Streaming"
         clear.accessibleContext.accessibleName = "Clear chat"
-        panel.add(JScrollPane(input), BorderLayout.CENTER)
-        panel.add(controls, BorderLayout.EAST)
-        return panel
+
+        val buttonPanel = JPanel()
+        buttonPanel.layout = BoxLayout(buttonPanel, BoxLayout.Y_AXIS)
+        buttonPanel.border = EmptyBorder(0, 4, 0, 0)
+        send.alignmentX = Component.CENTER_ALIGNMENT
+        clear.alignmentX = Component.CENTER_ALIGNMENT
+        buttonPanel.add(send)
+        buttonPanel.add(Box.createVerticalStrut(4))
+        buttonPanel.add(clear)
+
+        inputRow.add(inputContainer, BorderLayout.CENTER)
+        inputRow.add(buttonPanel, BorderLayout.EAST)
+
+        footer.add(inputRow)
+        return footer
     }
 
     private fun registerListeners() {
@@ -615,11 +672,11 @@ class ChatPanel(
         message.isEditable = false
         message.background = ChatPalette.toolCallBackground
         message.foreground = ChatPalette.bubbleForeground
-        message.border = EmptyBorder(4, 8, 4, 8)
+        message.border = EmptyBorder(6, 10, 6, 10)
         message.lineWrap = true
         message.wrapStyleWord = true
-        message.font = message.font.deriveFont(java.awt.Font.BOLD)
-        
+        message.font = CodexTheme.bodyFont.deriveFont(Font.BOLD)
+
         transcript.add(message)
         transcript.revalidate()
         scroll.verticalScrollBar.value = scroll.verticalScrollBar.maximum
@@ -677,20 +734,29 @@ class ChatPanel(
 
     private fun addUserMessage(text: String) {
         // Create bubble panel with rounded corners
-        val bubble = RoundedPanel(ChatPalette.userBubbleBackground, 12)
+        val bubble = RoundedPanel(ChatPalette.userBubbleBackground, CodexTheme.bubbleRadius)
         bubble.layout = BorderLayout()
-        bubble.border = EmptyBorder(8, 12, 8, 12)
+        bubble.border = EmptyBorder(
+            CodexTheme.bubblePadding.top, CodexTheme.bubblePadding.left,
+            CodexTheme.bubblePadding.bottom, CodexTheme.bubblePadding.right
+        )
 
-        val label = JLabel("<html><div style='width: 400px;'>$text</div></html>")
-        label.foreground = ChatPalette.bubbleForeground
-        bubble.add(label, BorderLayout.CENTER)
+        val area = JTextArea(text)
+        area.lineWrap = true
+        area.wrapStyleWord = true
+        area.isEditable = false
+        area.isOpaque = false
+        area.foreground = ChatPalette.bubbleForeground
+        area.border = null
+        area.maximumSize = Dimension(450, Int.MAX_VALUE)
+        bubble.add(area, BorderLayout.CENTER)
 
         // Right-align user messages
         val wrapper = JPanel(BorderLayout())
         wrapper.isOpaque = false
         wrapper.add(bubble, BorderLayout.EAST)
 
-        transcript.add(Box.createVerticalStrut(8))
+        transcript.add(Box.createVerticalStrut(CodexTheme.bubbleGap))
         transcript.add(wrapper)
         transcript.revalidate()
         scrollToBottom()
@@ -703,9 +769,12 @@ class ChatPanel(
 
     private fun prepareAgentBubble() {
         // Create bubble panel with rounded corners
-        val bubble = RoundedPanel(ChatPalette.agentBubbleBackground, 12)
+        val bubble = RoundedPanel(ChatPalette.agentBubbleBackground, CodexTheme.bubbleRadius)
         bubble.layout = BorderLayout()
-        bubble.border = EmptyBorder(8, 12, 8, 12)
+        bubble.border = EmptyBorder(
+            CodexTheme.bubblePadding.top, CodexTheme.bubblePadding.left,
+            CodexTheme.bubblePadding.bottom, CodexTheme.bubblePadding.right
+        )
 
         val area = JTextArea(1, 50)
         area.lineWrap = true
@@ -722,7 +791,7 @@ class ChatPanel(
         wrapper.add(bubble, BorderLayout.WEST)
 
         currentAgentArea = area
-        transcript.add(Box.createVerticalStrut(8))
+        transcript.add(Box.createVerticalStrut(CodexTheme.bubbleGap))
         transcript.add(wrapper)
         transcript.revalidate()
         scrollToBottom()
@@ -738,9 +807,12 @@ class ChatPanel(
         val cfg = ApplicationManager.getApplication().getService(CodexConfigService::class.java)
 
         // Create collapsible panel with reasoning header using rounded corners
-        val panel = RoundedPanel(ChatPalette.toolCallBackground, 12)
+        val panel = RoundedPanel(ChatPalette.toolCallBackground, CodexTheme.bubbleRadius)
         panel.layout = BorderLayout()
-        panel.border = EmptyBorder(8, 12, 8, 12)
+        panel.border = EmptyBorder(
+            CodexTheme.bubblePadding.top, CodexTheme.bubblePadding.left,
+            CodexTheme.bubblePadding.bottom, CodexTheme.bubblePadding.right
+        )
 
         // Header with toggle button
         val header = JPanel(BorderLayout())
@@ -753,6 +825,7 @@ class ChatPanel(
         toggleButton.isFocusPainted = false
         toggleButton.isContentAreaFilled = false
         toggleButton.foreground = ChatPalette.bubbleForeground
+        toggleButton.font = CodexTheme.secondaryFont
         header.add(toggleButton, BorderLayout.WEST)
 
         // Reasoning text area

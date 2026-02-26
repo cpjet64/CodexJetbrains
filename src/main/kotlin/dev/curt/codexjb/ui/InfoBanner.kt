@@ -1,7 +1,6 @@
 package dev.curt.codexjb.ui
 
 import java.awt.BorderLayout
-import java.awt.Color
 import javax.swing.JButton
 import javax.swing.JLabel
 import javax.swing.JPanel
@@ -14,12 +13,19 @@ class InfoBanner : JPanel(BorderLayout()) {
     private var timer: Timer? = null
 
     init {
-        background = Color(0xEE, 0xF7, 0xEE)
+        background = CodexTheme.infoBannerBg
         isVisible = false
-        border = EmptyBorder(6, 8, 6, 8)
+        border = EmptyBorder(
+            CodexTheme.bannerPadding.top,
+            CodexTheme.bannerPadding.left,
+            CodexTheme.bannerPadding.bottom,
+            CodexTheme.bannerPadding.right
+        )
         add(label, BorderLayout.CENTER)
         add(close, BorderLayout.EAST)
-        label.foreground = Color(0x00, 0x55, 0x22)
+        label.foreground = CodexTheme.infoBannerFg
+        label.font = CodexTheme.secondaryFont
+        close.font = CodexTheme.secondaryFont
         close.addActionListener { hideNow() }
         label.accessibleContext.accessibleName = "Info message"
         close.accessibleContext.accessibleName = "Hide info"
@@ -42,4 +48,3 @@ class InfoBanner : JPanel(BorderLayout()) {
         repaint()
     }
 }
-

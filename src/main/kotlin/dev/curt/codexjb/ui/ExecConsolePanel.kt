@@ -3,12 +3,14 @@ package dev.curt.codexjb.ui
 import dev.curt.codexjb.core.TelemetryService
 import dev.curt.codexjb.proto.EventBus
 import java.awt.BorderLayout
+import java.awt.Font
 import javax.swing.JButton
 import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.JScrollPane
 import javax.swing.JTextPane
 import javax.swing.SwingUtilities
+import javax.swing.border.EmptyBorder
 import javax.swing.text.StyledDocument
 
 class ExecConsolePanel : JPanel(BorderLayout()) {
@@ -24,10 +26,15 @@ class ExecConsolePanel : JPanel(BorderLayout()) {
 
     init {
         area.isEditable = false
+        header.font = CodexTheme.secondaryFont.deriveFont(Font.BOLD)
+        header.foreground = CodexTheme.secondaryLabelFg
+        header.border = EmptyBorder(4, 8, 4, 8)
         add(header, BorderLayout.NORTH)
         add(JScrollPane(area), BorderLayout.CENTER)
-        
+
         val buttonPanel = JPanel()
+        copy.font = CodexTheme.secondaryFont
+        kill.font = CodexTheme.secondaryFont
         buttonPanel.add(copy)
         buttonPanel.add(kill)
         add(buttonPanel, BorderLayout.SOUTH)

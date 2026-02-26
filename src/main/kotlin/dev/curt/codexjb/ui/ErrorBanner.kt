@@ -3,7 +3,6 @@ package dev.curt.codexjb.ui
 import com.google.gson.JsonObject
 import dev.curt.codexjb.proto.EventBus
 import java.awt.BorderLayout
-import java.awt.Color
 import javax.swing.JButton
 import javax.swing.JLabel
 import javax.swing.JPanel
@@ -15,12 +14,19 @@ class ErrorBanner : JPanel(BorderLayout()) {
     private val close = JButton("Dismiss")
 
     init {
-        background = Color(0xFF, 0xEE, 0xEE)
+        background = CodexTheme.errorBannerBg
         isVisible = false
-        border = EmptyBorder(6, 8, 6, 8)
+        border = EmptyBorder(
+            CodexTheme.bannerPadding.top,
+            CodexTheme.bannerPadding.left,
+            CodexTheme.bannerPadding.bottom,
+            CodexTheme.bannerPadding.right
+        )
         add(label, BorderLayout.CENTER)
         add(close, BorderLayout.EAST)
-        label.foreground = Color(0x80, 0, 0)
+        label.foreground = CodexTheme.errorBannerFg
+        label.font = CodexTheme.secondaryFont
+        close.font = CodexTheme.secondaryFont
         close.addActionListener { isVisible = false }
         label.accessibleContext.accessibleName = "Error message"
         close.accessibleContext.accessibleName = "Dismiss error"
@@ -46,4 +52,3 @@ class ErrorBanner : JPanel(BorderLayout()) {
         repaint()
     }
 }
-

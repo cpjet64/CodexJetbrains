@@ -15,8 +15,13 @@ import dev.curt.codexjb.core.TurnMetricsService
 import dev.curt.codexjb.proto.*
 import java.awt.BorderLayout
 import java.awt.Component
+import java.awt.Dimension
+import java.awt.FlowLayout
+import java.awt.Font
 import java.nio.file.Path
 import kotlin.io.path.exists
+import javax.swing.Box
+import javax.swing.BoxLayout
 import javax.swing.DefaultComboBoxModel
 import javax.swing.DefaultListCellRenderer
 import javax.swing.JCheckBox
@@ -488,25 +493,53 @@ class CodexToolWindowFactory : ToolWindowFactory {
       )
     }
     pushStatusBar()
+    // === Structured header with vertical rows ===
     val header = JPanel().apply {
-      add(JLabel("Model:"))
-      add(modelCombo)
-      add(JLabel("Reasoning:"))
-      add(reasoningCombo)
-      add(JLabel("Approval:"))
-      add(approvalCombo)
-      add(JLabel("Sandbox:"))
-      add(sandboxCombo)
+      layout = BoxLayout(this, BoxLayout.Y_AXIS)
+      border = EmptyBorder(CodexTheme.panelPadding, CodexTheme.panelPadding, CodexTheme.panelPadding, CodexTheme.panelPadding)
     }
-    val approvalWarn = JLabel("Full Access mode")
-    approvalWarn.foreground = java.awt.Color(0xB0, 0, 0)
+
+    // Row 2: Selectors (Model, Reasoning, Approval, Sandbox)
+    val selectorsRow = JPanel(FlowLayout(FlowLayout.LEFT, 8, 0)).apply {
+      alignmentX = Component.LEFT_ALIGNMENT
+    }
+    fun addSelectorLabel(text: String) = JLabel(text).apply {
+      font = CodexTheme.secondaryFont
+      foreground = CodexTheme.secondaryLabelFg
+    }
+    selectorsRow.add(addSelectorLabel("Model:"))
+    modelCombo.preferredSize = Dimension(130, 24)
+    selectorsRow.add(modelCombo)
+    selectorsRow.add(addSelectorLabel("Reasoning:"))
+    reasoningCombo.preferredSize = Dimension(130, 24)
+    selectorsRow.add(reasoningCombo)
+    selectorsRow.add(addSelectorLabel("Approval:"))
+    approvalCombo.preferredSize = Dimension(130, 24)
+    selectorsRow.add(approvalCombo)
+    selectorsRow.add(addSelectorLabel("Sandbox:"))
+    sandboxCombo.preferredSize = Dimension(130, 24)
+    selectorsRow.add(sandboxCombo)
+    header.add(selectorsRow)
+    header.add(Box.createVerticalStrut(CodexTheme.sectionGap))
+
+    // Row 3: Warning labels (conditional)
+    val warningsRow = JPanel(FlowLayout(FlowLayout.LEFT, 12, 0)).apply {
+      alignmentX = Component.LEFT_ALIGNMENT
+    }
+    val approvalWarn = JLabel("Full Access mode").apply {
+      foreground = CodexTheme.warningFg
+      font = CodexTheme.secondaryFont.deriveFont(Font.BOLD)
+    }
     val initialApproval = approvalCombo.selectedItem as CodexSettingsOptions.ApprovalLevelOption
     approvalWarn.isVisible = initialApproval.mode == ApprovalMode.FULL_ACCESS
-    header.add(approvalWarn)
-    val sandboxWarn = JLabel("Sandbox: Full Access")
-    sandboxWarn.foreground = java.awt.Color(0xB0, 0, 0)
+    warningsRow.add(approvalWarn)
+    val sandboxWarn = JLabel("Sandbox: Full Access").apply {
+      foreground = CodexTheme.warningFg
+      font = CodexTheme.secondaryFont.deriveFont(Font.BOLD)
+    }
     sandboxWarn.isVisible = initialSandbox.id == "danger-full-access"
-    header.add(sandboxWarn)
+    warningsRow.add(sandboxWarn)
+    header.add(warningsRow)
     modelCombo.accessibleContext.accessibleName = "Model selector"
     reasoningCombo.accessibleContext.accessibleName = "Reasoning level selector"
     approvalCombo.accessibleContext.accessibleName = "Approval level selector"
@@ -679,7 +712,30 @@ class CodexToolWindowFactory : ToolWindowFactory {
       SwingUtilities.invokeLater { toolWindow.show(null) }
     }
 
+    // Row 1: Title + action buttons
+    val titleRow = JPanel(BorderLayout()).apply {
+      alignmentX = Component.LEFT_ALIGNMENT
+    }
+    val titleLabel = JLabel("Codex").apply {
+      font = CodexTheme.headingFont
+    }
+    titleRow.add(titleLabel, BorderLayout.WEST)
+
+    val consoleToggle = JToggleButton("Console").apply {
+      font = CodexTheme.secondaryFont
+      isSelected = cfg.consoleVisible
+      addActionListener {
+        val visible = isSelected
+        consoleWrapper.isVisible = visible
+        cfg.consoleVisible = visible
+        panel.revalidate()
+        panel.repaint()
+      }
+      accessibleContext.accessibleName = "Toggle exec console visibility"
+    }
+
     val resetApprovalsButton = JButton("Reset approvals").apply {
+      font = CodexTheme.secondaryFont
       toolTipText = "Clear remembered approval decisions for this session"
       addActionListener {
         protocol.resetApprovalDecisions()
@@ -687,18 +743,59 @@ class CodexToolWindowFactory : ToolWindowFactory {
       }
       accessibleContext.accessibleName = "Reset remembered approval decisions"
     }
-    header.add(resetApprovalsButton)
 
-    // Session header and token usage indicators
-    val sessionLabel = JLabel("")
-    sessionLabel.foreground = java.awt.Color(0x33, 0x33, 0x33)
-    header.add(sessionLabel)
-    val usageLabel = JLabel("")
-    usageLabel.foreground = java.awt.Color(0x55, 0x55, 0x55)
-    header.add(usageLabel)
-    val pathLabel = JLabel("")
-    pathLabel.foreground = java.awt.Color(0x55, 0x55, 0x55)
-    header.add(pathLabel)
+    val titleButtons = JPanel(FlowLayout(FlowLayout.RIGHT, 4, 0))
+    titleButtons.add(consoleToggle)
+    titleButtons.add(resetApprovalsButton)
+    titleRow.add(titleButtons, BorderLayout.EAST)
+
+    // Insert title row at position 0 (before selectors row)
+    header.add(titleRow, 0)
+    header.add(Box.createVerticalStrut(CodexTheme.sectionGap), 1)
+
+    // Row 4: Info labels (session, tokens, path) — muted
+    header.add(Box.createVerticalStrut(CodexTheme.sectionGap))
+    val infoRow = JPanel(FlowLayout(FlowLayout.LEFT, 8, 0)).apply {
+      alignmentX = Component.LEFT_ALIGNMENT
+    }
+    val sessionLabel = JLabel("").apply {
+      foreground = CodexTheme.mutedLabelFg
+      font = CodexTheme.secondaryFont
+    }
+    infoRow.add(sessionLabel)
+    val usageLabel = JLabel("").apply {
+      foreground = CodexTheme.mutedLabelFg
+      font = CodexTheme.secondaryFont
+    }
+    infoRow.add(usageLabel)
+    val pathLabel = JLabel("").apply {
+      foreground = CodexTheme.mutedLabelFg
+      font = CodexTheme.secondaryFont
+    }
+    infoRow.add(pathLabel)
+    header.add(infoRow)
+
+    // Row 5: Checkboxes
+    header.add(Box.createVerticalStrut(CodexTheme.sectionGap))
+    val checkboxRow = JPanel(FlowLayout(FlowLayout.LEFT, 8, 0)).apply {
+      alignmentX = Component.LEFT_ALIGNMENT
+    }
+    val showReasoningCheck = JCheckBox("Show reasoning").apply {
+      font = CodexTheme.secondaryFont
+      isSelected = cfg.showReasoning
+      addActionListener { cfg.showReasoning = isSelected }
+      accessibleContext.accessibleName = "Show reasoning traces"
+      toolTipText = "Show model reasoning traces inline with chat responses"
+    }
+    checkboxRow.add(showReasoningCheck)
+    val autoOpenConsoleCheck = JCheckBox("Auto-open exec console").apply {
+      font = CodexTheme.secondaryFont
+      isSelected = cfg.autoOpenConsoleOnExec
+      addActionListener { cfg.autoOpenConsoleOnExec = isSelected }
+      accessibleContext.accessibleName = "Auto-open exec console"
+    }
+    checkboxRow.add(autoOpenConsoleCheck)
+    header.add(checkboxRow)
 
     bus.addListener("session_configured") { _, msg ->
       val m = msg.get("model")?.asString
@@ -736,34 +833,6 @@ class CodexToolWindowFactory : ToolWindowFactory {
       protocol.interrupt()
       infoBanner.show("Cancel request sent")
     }
-
-    val consoleToggle = JToggleButton("Console").apply {
-      isSelected = cfg.consoleVisible
-      addActionListener {
-        val visible = isSelected
-        consoleWrapper.isVisible = visible
-        cfg.consoleVisible = visible
-        panel.revalidate()
-        panel.repaint()
-      }
-      accessibleContext.accessibleName = "Toggle exec console visibility"
-    }
-    header.add(consoleToggle)
-
-    val autoOpenConsoleCheck = JCheckBox("Auto-open exec console").apply {
-      isSelected = cfg.autoOpenConsoleOnExec
-      addActionListener { cfg.autoOpenConsoleOnExec = isSelected }
-      accessibleContext.accessibleName = "Auto-open exec console"
-    }
-    header.add(autoOpenConsoleCheck)
-
-    val showReasoningCheck = JCheckBox("Show reasoning").apply {
-      isSelected = cfg.showReasoning
-      addActionListener { cfg.showReasoning = isSelected }
-      accessibleContext.accessibleName = "Show reasoning traces"
-      toolTipText = "Show model reasoning traces inline with chat responses"
-    }
-    header.add(showReasoningCheck)
 
     val ensureConsoleVisible = {
       if (!consoleWrapper.isVisible) {
