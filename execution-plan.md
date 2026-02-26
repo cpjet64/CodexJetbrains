@@ -177,3 +177,15 @@ Changes:
 - Closed stale tracker-gap reference task (F3.1) as part of backlog normalization work.
 - Added `docs/test-plan.md` covering reconnect, approvals, diff apply, and MCP test flows.
 - Marked `F3.1` and `F3.2` complete in `TODO_JetBrains.md` and `masterchecklist.md`.
+
+### Batch: F5 marketplace readiness documentation (partial complete)
+
+Changes:
+- Added `docs/marketplace-listing.md` with listing copy and feature highlights.
+- Added `docs/marketplace-compliance-checklist.md` with policy/evidence checklist.
+- Added `docs/release-cadence.md` with alpha/beta/stable cadence and criteria.
+- Added `spec.md` for pipeline input requirement and scope definition.
+
+Tracker updates:
+- Marked F5.1, F5.3, F5.4, and F5.6 complete in `TODO_JetBrains.md`.
+- Marked M5 remaining checklist items as in-progress pending manual asset/account validation.

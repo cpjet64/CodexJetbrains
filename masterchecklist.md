@@ -50,8 +50,8 @@ Legend:
 - [x] Add NOTICE and dependency license validation outputs.
 - [x] Add privacy statement, disclaimer, support, and security disclosure channel.
 - [x] Refresh README, changelog, quick-start/FAQ, and settings guide.
-- [ ] Prepare marketplace assets and listing copy.
-- [ ] Validate publisher permissions and release cadence.
+- [/] Prepare marketplace assets and listing copy.
+- [/] Validate publisher permissions and release cadence.
 
 ## M6. Post-Release Operations (F6)
 
@@ -59,3 +59,4 @@ Legend:
 - [x] Finalize issue templates and contribution guidance.
 - [x] Publish near-term roadmap update.
 - [x] Schedule and document release retrospective.
+

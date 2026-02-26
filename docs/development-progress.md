@@ -46,3 +46,9 @@
 - Updated stale JDK references in docs to JDK 21.
 - Added post-release operations docs: `docs/operations-playbook.md`, `docs/roadmap.md`,
   and `docs/release-retrospective.md`.
+
+- [x] Phase O marketplace-doc readiness batch (F5.1/F5.3/F5.4/F5.6) completed.
+
+Additional notes:
+- Added marketplace listing draft, compliance checklist, and release cadence docs.
+- Remaining release blockers are manual: media asset capture and publisher permission checks.

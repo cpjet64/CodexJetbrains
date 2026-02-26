@@ -58,19 +58,19 @@ Sources
 - [ ] [F4.5] Prepare demo GIFs/screen recordings for marketplace gallery and README.
 - [x] [F4.6] Document configuration knobs (CLI path, WSL, approvals) in settings guide.
 
-- [ ] [F5.1] Set plugin version, name, and change notes aligned with JetBrains rules.
+- [x] [F5.1] Set plugin version, name, and change notes aligned with JetBrains rules.
 - [ ] [F5.2] Collect marketplace assets (icon 128/512, header, screenshots, video).
-- [ ] [F5.3] Draft marketplace description, feature highlights, installation steps.
-- [ ] [F5.4] Complete marketplace compliance checklist (privacy, support, EULA refs).
+- [x] [F5.3] Draft marketplace description, feature highlights, installation steps.
+- [x] [F5.4] Complete marketplace compliance checklist (privacy, support, EULA refs).
 - [ ] [F5.5] Validate JetBrains account publisher profile and upload permissions.
-- [ ] [F5.6] Plan release cadence (alpha/beta/stable) and set milestone dates.
+- [x] [F5.6] Plan release cadence (alpha/beta/stable) and set milestone dates.
 
 - [x] [F6.1] Define monitoring plan for diagnostics, telemetry, and failure alerts.
 - [x] [F6.2] Create issue templates and contribution guidelines for release.
 - [x] [F6.3] Outline roadmap for next milestones (settings UI polish, IDE support).
 - [x] [F6.4] Schedule retrospective once marketplace submission is accepted.
 
-## B. VS Code parity (v1.0.0) — phase-level tracking
+## B. VS Code parity (v1.0.0) ? phase-level tracking
 
 - [!] Phase 1: TODO CodeLens Provider (status needs reconciliation with repo)
 - [ ] Phase 2: Context Menu Integration
@@ -95,3 +95,4 @@ Sources
   - AppServerProtocol.kt:73, AppServerProtocol.kt:79
 - [x] Tests: re-implement debounce tests with proper mocking.
   - ChatPanelDebounceTest.kt:31, ChatPanelDebounceTest.kt:46
+

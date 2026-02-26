@@ -76,3 +76,17 @@
 - Status: implementation complete; commit pending.
 - Notes:
   - Completed F6.1-F6.4 with documentation and tracker updates.
+
+## Active Run: Full Pipeline Continuation
+
+- [x] Satisfy pipeline input requirement by creating `spec.md`.
+- [x] Execute non-manual marketplace readiness docs tasks (F5.1/F5.3/F5.4/F5.6).
+- [x] Sync checklist/plan/progress trackers.
+- [x] Finalize pipeline summary + commit.
+
+## Review (in progress): Full Pipeline Continuation
+
+- Status: implementation complete.
+- Notes:
+  - Manual M3/M5 tasks remain blocked on GUI marketplace/account operations.
+
