@@ -14,7 +14,8 @@
 - [x] Phase H next implementation batch (F3.4 targeted UI tests) completed.
 - [x] Phase I next implementation batch (F3.6 manual release docs) completed.
 - [x] Phase J next implementation batch (F3.7 perf baseline) completed.
-- [ ] Phase K next implementation batch (remaining M3/M4) pending.
+- [x] Phase K next implementation batch (F3.1/F3.2 closure) completed.
+- [ ] Phase L next implementation batch (remaining M3/M4) pending.
 
 ### Completed Batch
 
@@ -35,3 +36,4 @@
 - Added targeted UI tests for icon presence and default chat/toolwindow idle state.
 - Added explicit manual release checklist in `RELEASING.md`.
 - Baseline benchmark captured in `perf.csv` (`gradlew buildPlugin` duration).
+- Added `docs/test-plan.md` for reconnect/approvals/diff/MCP release validation.

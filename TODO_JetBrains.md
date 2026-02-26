@@ -43,8 +43,8 @@ Sources
 - [ ] [F2.7] Verify keybinding, ToolWindow anchor, and context actions vs VSIX.
 - [ ] [F2.8] Document install/uninstall steps for README and release notes.
 
-- [ ] [F3.1] Close TODO_JetBrains.md T10.x gaps once tasks above are verified.
-- [ ] [F3.2] Expand test plan covering CLI reconnect, approvals, diff apply, MCP flows.
+- [x] [F3.1] Close TODO_JetBrains.md T10.x gaps once tasks above are verified.
+- [x] [F3.2] Expand test plan covering CLI reconnect, approvals, diff apply, MCP flows.
 - [x] [F3.3] Ensure ./gradlew test passes on clean checkout and record run log in repo.
 - [x] [F3.4] Add targeted UI tests for icon presence and ToolWindow default state.
 - [x] [F3.5] Review CI workflow (.github/workflows/ci.yml) for release build/test steps.

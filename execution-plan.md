@@ -135,3 +135,10 @@ Changes:
 - Captured baseline build benchmark into `perf.csv`.
 - Recorded datapoint for `gradlew buildPlugin` duration.
 - Marked `F3.7` complete in `TODO_JetBrains.md` and `masterchecklist.md`.
+
+### Batch: F3.1-F3.2 tracker/test-plan closure (complete)
+
+Changes:
+- Closed stale tracker-gap reference task (F3.1) as part of backlog normalization work.
+- Added `docs/test-plan.md` covering reconnect, approvals, diff apply, and MCP test flows.
+- Marked `F3.1` and `F3.2` complete in `TODO_JetBrains.md` and `masterchecklist.md`.
