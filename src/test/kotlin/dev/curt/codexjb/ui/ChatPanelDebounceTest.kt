@@ -18,11 +18,13 @@ class ChatPanelDebounceTest {
     @Test
     fun debouncesRapidRefreshClicks() {
         val protocol = createMockProtocol()
-        val panel = createPanel(protocol)
         val opCount = AtomicInteger(0)
         protocol.legacyOpObserver = {
             if (it == "list_mcp_tools") opCount.incrementAndGet()
         }
+        val panel = createPanel(protocol)
+        SwingUtilities.invokeAndWait { }
+        val baseline = opCount.get()
 
         val button = button(panel, "refreshToolsButton")
 
@@ -32,17 +34,19 @@ class ChatPanelDebounceTest {
             SwingUtilities.invokeAndWait { button.doClick() }
         }
 
-        assertEquals(1, opCount.get(), "Rapid clicks should trigger one tool refresh op")
+        assertEquals(baseline + 1, opCount.get(), "Rapid clicks should trigger one additional tool refresh op")
     }
 
     @Test
     fun allowsRefreshAfterDebounceWindow() {
         val protocol = createMockProtocol()
-        val panel = createPanel(protocol)
         val opCount = AtomicInteger(0)
         protocol.legacyOpObserver = {
             if (it == "list_mcp_tools") opCount.incrementAndGet()
         }
+        val panel = createPanel(protocol)
+        SwingUtilities.invokeAndWait { }
+        val baseline = opCount.get()
 
         val button = button(panel, "refreshToolsButton")
 
@@ -51,7 +55,7 @@ class ChatPanelDebounceTest {
         Thread.sleep(1100)
         SwingUtilities.invokeAndWait { button.doClick() }
 
-        assertEquals(2, opCount.get(), "Clicks beyond debounce window should trigger new refresh ops")
+        assertEquals(baseline + 2, opCount.get(), "Clicks beyond debounce window should trigger two additional refresh ops")
     }
 
     private fun createMockProtocol(): AppServerProtocol {
