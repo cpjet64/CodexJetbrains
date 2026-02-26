@@ -6,11 +6,13 @@
 - [x] Declare SSOT tracker model (`TODO_JetBrains.md` authoritative, `todo-final.md` mirror).
 - [x] Reconcile parity completion-check contradictions.
 - [x] Align docs index references to SSOT.
-- [ ] Select and execute next non-blocking implementation batch (M3/M4).
+- [x] Select and execute next non-blocking implementation batch (F3.5 CI review).
+- [ ] Select and execute next non-blocking implementation batch (remaining M3/M4).
 
 ## Review
 
-- Status: M1 normalization complete; ready for next implementation batch.
+- Status: M1 normalization + F3.5 CI review complete.
 - Notes:
   - Tracker drift corrected in docs/planning files.
-  - Next step is code/test work under M3/M4 scope.
+  - CI workflow hardened with release-oriented validation and artifacts.
+  - Next step is remaining M3/M4 implementation/test work.

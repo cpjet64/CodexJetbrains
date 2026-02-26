@@ -96,3 +96,13 @@ Outcome:
 - Execute next non-blocking milestone batch from M3/M4.
 - Keep `masterchecklist.md`, `execution-plan.md`, and `.AGENTS/todo.md` synchronized.
 - Run verification commands appropriate to touched scope and document outcomes.
+
+## 6. Batch Notes
+
+### Batch: F3.5 CI workflow review (complete)
+
+Changes:
+- Reviewed and hardened `.github/workflows/ci.yml` for release readiness.
+- Added `workflow_dispatch`, concurrency control, wrapper validation, timeout, and
+  always-on artifact uploads for distributions, tests, and Plugin Verifier reports.
+- Marked `F3.5` complete in `TODO_JetBrains.md` and `masterchecklist.md`.
