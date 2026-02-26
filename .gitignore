@@ -387,4 +387,5 @@ CON
 archive/
 /CLAUDE.md
 /.claude/settings.local.json
+/.claude/
 /openai.chatgpt-0.4.15.vsix
