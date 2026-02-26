@@ -128,3 +128,10 @@ Changes:
 - Expanded `RELEASING.md` with explicit manual release checklist (verification, tagging,
   Marketplace upload, post-publish checks).
 - Marked `F3.6` complete in `TODO_JetBrains.md` and `masterchecklist.md`.
+
+### Batch: F3.7 performance baseline capture (complete)
+
+Changes:
+- Captured baseline build benchmark into `perf.csv`.
+- Recorded datapoint for `gradlew buildPlugin` duration.
+- Marked `F3.7` complete in `TODO_JetBrains.md` and `masterchecklist.md`.

@@ -43,7 +43,7 @@ Legend:
 - [x] F3.4 Add targeted UI tests (icon presence and ToolWindow default state).
 - [x] F3.5 Review CI release gates.
 - [x] F3.6 Define publish workflow or document manual release.
-- [ ] F3.7 Capture baseline performance metrics.
+- [x] F3.7 Capture baseline performance metrics.
 
 ## M5. Legal, Docs, and Marketplace Readiness (F1/F4/F5)
 

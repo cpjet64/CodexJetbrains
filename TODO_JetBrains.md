@@ -49,7 +49,7 @@ Sources
 - [x] [F3.4] Add targeted UI tests for icon presence and ToolWindow default state.
 - [x] [F3.5] Review CI workflow (.github/workflows/ci.yml) for release build/test steps.
 - [x] [F3.6] Add publishing workflow (sign, upload ZIP) or document manual release process.
-- [ ] [F3.7] Capture performance benchmarks (perf.csv) after final build for regressions.
+- [x] [F3.7] Capture performance benchmarks (perf.csv) after final build for regressions.
 
 - [ ] [F4.1] Refresh README with install instructions, feature matrix, troubleshooting.
 - [ ] [F4.2] Create CHANGELOG.md entry for 0.1.0 with key features and known gaps.

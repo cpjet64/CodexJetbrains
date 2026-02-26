@@ -13,7 +13,8 @@
 - [x] Phase G next implementation batch (F3.3 full test + run log) completed.
 - [x] Phase H next implementation batch (F3.4 targeted UI tests) completed.
 - [x] Phase I next implementation batch (F3.6 manual release docs) completed.
-- [ ] Phase J next implementation batch (remaining M3/M4) pending.
+- [x] Phase J next implementation batch (F3.7 perf baseline) completed.
+- [ ] Phase K next implementation batch (remaining M3/M4) pending.
 
 ### Completed Batch
 
@@ -33,3 +34,4 @@
 - Full test run log captured: `docs/test-runs/gradlew-test-2026-02-26.log`.
 - Added targeted UI tests for icon presence and default chat/toolwindow idle state.
 - Added explicit manual release checklist in `RELEASING.md`.
+- Baseline benchmark captured in `perf.csv` (`gradlew buildPlugin` duration).
