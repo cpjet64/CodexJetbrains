@@ -279,7 +279,7 @@ class ChatPanel(
         footer.layout = BoxLayout(footer, BoxLayout.Y_AXIS)
 
         // Row 1: Thin full-width streaming indicator
-        spinner.preferredSize = Dimension(Int.MAX_VALUE, 2)
+        spinner.preferredSize = Dimension(0, 2)
         spinner.maximumSize = Dimension(Int.MAX_VALUE, 2)
         spinner.alignmentX = Component.LEFT_ALIGNMENT
         footer.add(spinner)
@@ -744,11 +744,11 @@ class ChatPanel(
         val area = JTextArea(text)
         area.lineWrap = true
         area.wrapStyleWord = true
+        area.columns = 50
         area.isEditable = false
         area.isOpaque = false
         area.foreground = ChatPalette.bubbleForeground
         area.border = null
-        area.maximumSize = Dimension(450, Int.MAX_VALUE)
         bubble.add(area, BorderLayout.CENTER)
 
         // Right-align user messages
