@@ -45,7 +45,7 @@ Sources
 
 - [ ] [F3.1] Close TODO_JetBrains.md T10.x gaps once tasks above are verified.
 - [ ] [F3.2] Expand test plan covering CLI reconnect, approvals, diff apply, MCP flows.
-- [ ] [F3.3] Ensure ./gradlew test passes on clean checkout and record run log in repo.
+- [x] [F3.3] Ensure ./gradlew test passes on clean checkout and record run log in repo.
 - [ ] [F3.4] Add targeted UI tests for icon presence and ToolWindow default state.
 - [x] [F3.5] Review CI workflow (.github/workflows/ci.yml) for release build/test steps.
 - [ ] [F3.6] Add publishing workflow (sign, upload ZIP) or document manual release process.

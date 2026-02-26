@@ -10,7 +10,8 @@
 - [x] Phase D backlog sync and completion notes.
 - [x] Phase E backlog normalization (M1) completed.
 - [x] Phase F next implementation batch (F3.5 CI review) completed.
-- [ ] Phase G next implementation batch (remaining M3/M4) pending.
+- [x] Phase G next implementation batch (F3.3 full test + run log) completed.
+- [ ] Phase H next implementation batch (remaining M3/M4) pending.
 
 ### Completed Batch
 
@@ -27,3 +28,4 @@
 - Full verification required `JAVA_HOME` override to JDK 21 because local default JDK is 25.
 - SSOT model enforced: `TODO_JetBrains.md` is primary; `todo-final.md` is mirror.
 - CI workflow hardened for release validation and diagnostics artifact collection.
+- Full test run log captured: `docs/test-runs/gradlew-test-2026-02-26.log`.

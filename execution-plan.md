@@ -106,3 +106,10 @@ Changes:
 - Added `workflow_dispatch`, concurrency control, wrapper validation, timeout, and
   always-on artifact uploads for distributions, tests, and Plugin Verifier reports.
 - Marked `F3.5` complete in `TODO_JetBrains.md` and `masterchecklist.md`.
+
+### Batch: F3.3 full test verification with run log (complete)
+
+Changes:
+- Executed full `./gradlew test` on JDK 21.
+- Stored run output at `docs/test-runs/gradlew-test-2026-02-26.log`.
+- Marked `F3.3` complete in `TODO_JetBrains.md` and `masterchecklist.md`.
