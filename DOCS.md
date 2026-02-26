@@ -17,7 +17,10 @@ This file provides an overview of all documentation in the repository.
 ## Planning Documents
 
 ### Current Implementation Plan (v1.0.0)
-- **[VSCODE_PARITY_IMPLEMENTATION.md](VSCODE_PARITY_IMPLEMENTATION.md)** ⭐ **PRIMARY PLAN**
+- **[TODO_JetBrains.md](TODO_JetBrains.md)** ⭐ **PRIMARY PLAN / SSOT**
+  - Authoritative backlog and status tracker
+  - Release blockers, parity phases, and technical debt in one place
+- **[VSCODE_PARITY_IMPLEMENTATION.md](VSCODE_PARITY_IMPLEMENTATION.md)** (detailed parity reference)
   - 194+ checkbox implementation plan
   - 10 detailed phases with timelines
   - Step-by-step tasks for achieving VS Code parity
@@ -57,7 +60,6 @@ This file provides an overview of all documentation in the repository.
 
 ### Future Roadmap (Post v1.0.0)
 - **[JETBRAINS_FULL_INTEGRATION_ROADMAP.md](JETBRAINS_FULL_INTEGRATION_ROADMAP.md)**
-| TODO_JetBrains.md | ? Active | Authoritative backlog |
   - Vision for full JetBrains IDE integration
   - 11 supported IDEs (IntelliJ, PyCharm, WebStorm, etc.)
   - 3 integration levels (Basic → Platform → IDE-Specific)
@@ -105,14 +107,14 @@ Located in `.github/ISSUE_TEMPLATE/`:
 
 | Document | Status | Purpose |
 |----------|--------|---------|
-| VSCODE_PARITY_IMPLEMENTATION.md | ✅ Active | Primary implementation plan |
+| TODO_JetBrains.md | ✅ Active | Primary implementation plan / SSOT |
+| VSCODE_PARITY_IMPLEMENTATION.md | ✅ Active | Detailed parity implementation reference |
 | VSCODE_IMPLEMENTATION_DETAILS.md | ✅ Active | Technical reference |
 | CLI_INTEGRATION_DEEP_DIVE.md | ✅ Active | CLI integration guide |
 | CLI_LIFECYCLE_ANALYSIS.md | ✅ Active | CLI lifecycle audit |
 | CLI_LIFECYCLE_FIXES.md | ✅ Active | Lifecycle fixes summary |
 | CODEX_LAUNCHER_STATUS.md | ✅ Active | Project decisions |
 | JETBRAINS_FULL_INTEGRATION_ROADMAP.md | ✅ Active | Future roadmap |
-| TODO_JetBrains.md | ? Active | Authoritative backlog |
 | todo-final.md | ✅ Active | Release blockers |
 | README.md | ✅ Active | Main documentation |
 | CLAUDE.md | ✅ Active | AI assistant guide |
@@ -130,7 +132,7 @@ Located in `.github/ISSUE_TEMPLATE/`:
 3. Check [AGENTS.md](AGENTS.md) for commit format and workflow
 
 **For Development:**
-1. [VSCODE_PARITY_IMPLEMENTATION.md](VSCODE_PARITY_IMPLEMENTATION.md) - What to implement next
+1. [TODO_JetBrains.md](TODO_JetBrains.md) - What to implement next (authoritative)
 2. [VSCODE_IMPLEMENTATION_DETAILS.md](VSCODE_IMPLEMENTATION_DETAILS.md) - How to implement it
 3. [CLAUDE.md](CLAUDE.md) - Project architecture and build commands
 

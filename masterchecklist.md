@@ -13,9 +13,9 @@ Legend:
 
 ## M1. Backlog Normalization
 
-- [ ] Declare one execution SSOT and remove tracker drift.
-- [ ] Reconcile parity-status contradictions in parity docs.
-- [ ] Keep `.AGENTS/todo.md` synchronized with active phase.
+- [x] Declare one execution SSOT and remove tracker drift.
+- [x] Reconcile parity-status contradictions in parity docs.
+- [x] Keep `.AGENTS/todo.md` synchronized with active phase.
 
 ## M2. Protocol and Approval Gaps (Code TODO Batch)
 

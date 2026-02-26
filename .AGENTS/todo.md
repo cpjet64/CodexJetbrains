@@ -1,22 +1,16 @@
 # TODO / Plan
 
-## Active Run: Orchestrator + Standardization Gate + Code TODO Batch
+## Active Run: Orchestrator + Backlog Normalization
 
-- [x] Read `Justfile` and current governance docs.
-- [x] Detect missing canonical planning docs (`masterchecklist.md`, `execution-plan.md`).
-- [x] Generate canonical planning docs from active backlog sources.
-- [x] Save an execution plan snapshot in `.AGENTS/plans/`.
-- [x] Implement code TODO batch C.1-C.5 (approvals + JSON-RPC op mapping + debounce tests).
-- [x] Run formatter, lint/build, and targeted tests for touched modules.
-- [x] Run full test suite verification (`./gradlew test`) if environment permits.
-- [x] Update backlog trackers and progress docs with outcomes.
+- [x] Audit current planning docs and tracker freshness post-push.
+- [x] Declare SSOT tracker model (`TODO_JetBrains.md` authoritative, `todo-final.md` mirror).
+- [x] Reconcile parity completion-check contradictions.
+- [x] Align docs index references to SSOT.
+- [ ] Select and execute next non-blocking implementation batch (M3/M4).
 
 ## Review
 
-- Status: Complete for C2.1-C2.5 batch.
-- Verification:
-  - Targeted: `ChatPanelDebounceTest`, `ChatPanelTest`, `ApprovalsTest` passed.
-  - Full: `./gradlew test` passed.
+- Status: M1 normalization complete; ready for next implementation batch.
 - Notes:
-  - Existing uncommitted work was detected before this run and preserved.
-  - Build/test needed JDK 21 override because system default JDK is 25.
+  - Tracker drift corrected in docs/planning files.
+  - Next step is code/test work under M3/M4 scope.

@@ -1,3 +1,6 @@
+> Tracking note: `TODO_JetBrains.md` is the authoritative execution tracker.
+> This file is a release-focused mirror and should stay synchronized with it.
+
 Legend
 - [ ] Not started
 - [/] In progress (annotate status details)

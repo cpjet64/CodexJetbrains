@@ -1,6 +1,6 @@
 # Execution Plan
 
-Last updated: 2026-02-26
+Last updated: 2026-02-26 (post-M1 normalization)
 Primary tracker: `masterchecklist.md`
 Backlog source: `TODO_JetBrains.md`
 
@@ -14,13 +14,13 @@ Backlog source: `TODO_JetBrains.md`
 
 ## 2. Current State
 
-- Repo contains in-flight uncommitted edits in:
-  - `src/main/kotlin/dev/curt/codexjb/core/CodexProcessService.kt`
-  - `src/main/kotlin/dev/curt/codexjb/proto/AppServerProtocol.kt`
-  - `src/main/kotlin/dev/curt/codexjb/ui/ChatPanel.kt`
-  - `DOCS.md`
-- Canonical planning docs were missing and have now been generated.
-- Immediate engineering priority is M2 (protocol + approvals technical debt).
+- Canonical planning docs are in place and synchronized.
+- M2 (protocol + approvals technical debt) is complete.
+- M1 backlog normalization is complete:
+  - SSOT declared as `TODO_JetBrains.md`
+  - parity completion checklist contradictions corrected
+  - docs index aligned to SSOT
+- Next engineering priorities are M3/M4 tasks that can be executed non-interactively.
 
 ## 3. Phase Plan
 
@@ -74,6 +74,16 @@ Validation outcomes:
 2. Update `masterchecklist.md` M2 statuses.
 3. Append milestone outcome to `docs/development-progress.md`.
 
+### Phase E: Backlog Normalization M1 (complete)
+
+1. Declare and document `TODO_JetBrains.md` as SSOT.
+2. Reconcile parity checklist contradictions in `VSCODE_PARITY_IMPLEMENTATION.md`.
+3. Align docs index references with the active tracker model.
+
+Outcome:
+- M1 checklist items marked complete.
+- Tracker drift reduced between `TODO_JetBrains.md`, `todo-final.md`, and docs index.
+
 ## 4. Worktree Execution Model
 
 - Default: one worktree per task batch under `.worktrees/`.
@@ -81,8 +91,8 @@ Validation outcomes:
   in-place changes for this batch to avoid overwriting unrelated work.
 - After workspace is clean and batched commits exist, resume strict per-task worktree fanout.
 
-## 5. Exit Criteria for This Run
+## 5. Exit Criteria for Next Batch
 
-- C2.1-C2.5 implemented and verified.
-- Targeted and full tests pass, or explicit blocker documented.
-- Planning/progress docs reflect final state.
+- Execute next non-blocking milestone batch from M3/M4.
+- Keep `masterchecklist.md`, `execution-plan.md`, and `.AGENTS/todo.md` synchronized.
+- Run verification commands appropriate to touched scope and document outcomes.

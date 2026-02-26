@@ -661,16 +661,16 @@ ContextFile(
 ## Completion Checklist
 
 ### Definition of Done
-- [x] Phase 1: TODO CodeLens working and tested
-- [x] Phase 2: Context menu integration working
-- [x] Phase 3: Settings simplified to 3 core + advanced mode
-- [x] Phase 4: New chat keybinding working
-- [x] Phase 5: Git handlers verified
-- [x] Phase 6: Open on startup working
-- [x] Phase 7: Git apply integration working
-- [x] Phase 8: All tests passing (114+ tests)
-- [x] Phase 9: Documentation complete
-- [x] Phase 10: v1.0.0 released
+- [ ] Phase 1: TODO CodeLens working and tested
+- [ ] Phase 2: Context menu integration working
+- [ ] Phase 3: Settings simplified to 3 core + advanced mode
+- [ ] Phase 4: New chat keybinding working
+- [ ] Phase 5: Git handlers verified
+- [ ] Phase 6: Open on startup working
+- [ ] Phase 7: Git apply integration working
+- [ ] Phase 8: All tests passing (114+ tests)
+- [ ] Phase 9: Documentation complete
+- [ ] Phase 10: v1.0.0 released
 
 ### Parity Verification
 - [ ] Side-by-side test with VS Code passed
