@@ -1,12 +1,13 @@
 package dev.curt.codexjb.core
 
+import com.intellij.openapi.Disposable
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 import java.io.InputStream
 
 class CodexProcessService(
     private val factory: CodexProcessFactory = DefaultCodexProcessFactory()
-) {
+) : Disposable {
 
     private val lock = ReentrantLock()
     private var state: ProcessState? = null
@@ -61,6 +62,10 @@ class CodexProcessService(
     }
 
     fun currentHandle(): CodexProcessHandle? = lock.withLock { state?.handle }
+
+    override fun dispose() {
+        stop()
+    }
 
     private data class ProcessState(val handle: CodexProcessHandle)
 }

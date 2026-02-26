@@ -6,12 +6,12 @@ import dev.curt.codexjb.proto.AppServerProtocol
 import dev.curt.codexjb.proto.EventBus
 import dev.curt.codexjb.proto.TurnRegistry
 import java.nio.file.Paths
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicReference
 import javax.swing.JButton
 import javax.swing.SwingUtilities
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class ChatPanelDebounceTest {
 
@@ -19,23 +19,31 @@ class ChatPanelDebounceTest {
     fun debouncesRapidRefreshClicks() {
         val protocol = createMockProtocol()
         val panel = createPanel(protocol)
+        val opCount = AtomicInteger(0)
+        protocol.legacyOpObserver = {
+            if (it == "list_mcp_tools") opCount.incrementAndGet()
+        }
+
         val button = button(panel, "refreshToolsButton")
 
-        // Just verify the button exists and can be clicked without errors
         SwingUtilities.invokeAndWait { button.doClick() }
         repeat(4) {
             Thread.sleep(100) // within debounce window
             SwingUtilities.invokeAndWait { button.doClick() }
         }
 
-        // TODO: Re-implement test with proper mocking when protocol supports it
-        assertTrue(true, "Debounce test placeholder")
+        assertEquals(1, opCount.get(), "Rapid clicks should trigger one tool refresh op")
     }
 
     @Test
     fun allowsRefreshAfterDebounceWindow() {
         val protocol = createMockProtocol()
         val panel = createPanel(protocol)
+        val opCount = AtomicInteger(0)
+        protocol.legacyOpObserver = {
+            if (it == "list_mcp_tools") opCount.incrementAndGet()
+        }
+
         val button = button(panel, "refreshToolsButton")
 
         SwingUtilities.invokeAndWait { button.doClick() }
@@ -43,8 +51,7 @@ class ChatPanelDebounceTest {
         Thread.sleep(1100)
         SwingUtilities.invokeAndWait { button.doClick() }
 
-        // TODO: Re-implement test with proper mocking when protocol supports it
-        assertTrue(true, "Debounce test placeholder")
+        assertEquals(2, opCount.get(), "Clicks beyond debounce window should trigger new refresh ops")
     }
 
     private fun createMockProtocol(): AppServerProtocol {
@@ -81,4 +88,3 @@ class ChatPanelDebounceTest {
         private val TEST_CONFIG = CodexProcessConfig(executable = Paths.get("/usr/bin/codex"))
     }
 }
-

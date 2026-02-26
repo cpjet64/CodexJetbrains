@@ -19,6 +19,9 @@ import java.awt.BorderLayout
 import java.awt.Color
 import java.awt.Component
 import java.awt.Dimension
+import java.awt.Graphics
+import java.awt.Graphics2D
+import java.awt.RenderingHints
 import java.awt.event.ActionEvent
 import java.awt.FlowLayout
 import java.nio.file.Path
@@ -487,9 +490,11 @@ class ChatPanel(
     }
 
     private fun sendOp(op: String) {
-        // TODO: Map old envelope ops to JSON-RPC methods
-        // For now, log a warning that this operation is not supported
-        log.warn("Operation '$op' not yet supported in JSON-RPC protocol")
+        protocol.sendLegacyOp(op)
+            .exceptionally { error ->
+                log.warn("Operation '$op' failed: ${error.message}")
+                Unit
+            }
     }
 
     private fun refreshTools() {
@@ -515,8 +520,11 @@ class ChatPanel(
             log.warn("Attempted to run unknown MCP tool: $toolName")
             return
         }
-        // TODO: Align with CLI op when available. For now, treat as user input hint.
-        sendUserInput("Please run MCP tool: $toolName")
+        protocol.runMcpTool(toolName)
+            .exceptionally { error ->
+                log.warn("Failed to run MCP tool '$toolName': ${error.message}")
+                Unit
+            }
         log.info("Running tool: $toolName")
 
         addUserMessage("Running tool: $toolName")
@@ -668,14 +676,22 @@ class ChatPanel(
     }
 
     private fun addUserMessage(text: String) {
-        val label = JLabel(text)
-        label.isOpaque = true
-        label.background = ChatPalette.userBubbleBackground
+        // Create bubble panel with rounded corners
+        val bubble = RoundedPanel(ChatPalette.userBubbleBackground, 12)
+        bubble.layout = BorderLayout()
+        bubble.border = EmptyBorder(8, 12, 8, 12)
+
+        val label = JLabel("<html><div style='width: 400px;'>$text</div></html>")
         label.foreground = ChatPalette.bubbleForeground
-        label.border = EmptyBorder(8, 8, 8, 8)
-        label.alignmentX = Component.RIGHT_ALIGNMENT
-        transcript.add(Box.createVerticalStrut(4))
-        transcript.add(label)
+        bubble.add(label, BorderLayout.CENTER)
+
+        // Right-align user messages
+        val wrapper = JPanel(BorderLayout())
+        wrapper.isOpaque = false
+        wrapper.add(bubble, BorderLayout.EAST)
+
+        transcript.add(Box.createVerticalStrut(8))
+        transcript.add(wrapper)
         transcript.revalidate()
         scrollToBottom()
     }
@@ -686,16 +702,28 @@ class ChatPanel(
     }
 
     private fun prepareAgentBubble() {
-        val area = JTextArea(1, 40)
+        // Create bubble panel with rounded corners
+        val bubble = RoundedPanel(ChatPalette.agentBubbleBackground, 12)
+        bubble.layout = BorderLayout()
+        bubble.border = EmptyBorder(8, 12, 8, 12)
+
+        val area = JTextArea(1, 50)
         area.lineWrap = true
         area.wrapStyleWord = true
         area.isEditable = false
-        area.background = ChatPalette.agentBubbleBackground
+        area.isOpaque = false
         area.foreground = ChatPalette.bubbleForeground
-        area.border = EmptyBorder(8, 8, 8, 8)
+        area.border = null
+        bubble.add(area, BorderLayout.CENTER)
+
+        // Left-align agent messages
+        val wrapper = JPanel(BorderLayout())
+        wrapper.isOpaque = false
+        wrapper.add(bubble, BorderLayout.WEST)
+
         currentAgentArea = area
-        transcript.add(Box.createVerticalStrut(4))
-        transcript.add(area)
+        transcript.add(Box.createVerticalStrut(8))
+        transcript.add(wrapper)
         transcript.revalidate()
         scrollToBottom()
     }
@@ -709,14 +737,14 @@ class ChatPanel(
     private fun prepareReasoningBubble() {
         val cfg = ApplicationManager.getApplication().getService(CodexConfigService::class.java)
 
-        // Create collapsible panel with reasoning header
-        val panel = JPanel(BorderLayout())
-        panel.background = ChatPalette.toolCallBackground
-        panel.border = EmptyBorder(4, 8, 4, 8)
+        // Create collapsible panel with reasoning header using rounded corners
+        val panel = RoundedPanel(ChatPalette.toolCallBackground, 12)
+        panel.layout = BorderLayout()
+        panel.border = EmptyBorder(8, 12, 8, 12)
 
         // Header with toggle button
         val header = JPanel(BorderLayout())
-        header.background = ChatPalette.toolCallBackground
+        header.isOpaque = false
 
         // Start collapsed or expanded based on user preference
         val startExpanded = cfg.showReasoning
@@ -732,13 +760,14 @@ class ChatPanel(
         area.lineWrap = true
         area.wrapStyleWord = true
         area.isEditable = false
-        area.background = ChatPalette.toolCallBackground
+        area.isOpaque = false
         area.foreground = ChatPalette.bubbleForeground
         area.border = EmptyBorder(8, 8, 8, 8)
 
         val scrollPane = JScrollPane(area)
         scrollPane.border = null
-        scrollPane.viewport.background = ChatPalette.toolCallBackground
+        scrollPane.isOpaque = false
+        scrollPane.viewport.isOpaque = false
         scrollPane.isVisible = startExpanded // Start collapsed if showReasoning is false
 
         panel.add(header, BorderLayout.NORTH)
@@ -870,3 +899,19 @@ class ChatPanel(
     }
 }
 
+/**
+ * Custom JPanel that draws rounded corners.
+ */
+class RoundedPanel(private val bgColor: Color, private val radius: Int) : JPanel() {
+    init {
+        isOpaque = false
+    }
+
+    override fun paintComponent(g: Graphics) {
+        val g2 = g.create() as Graphics2D
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON)
+        g2.color = bgColor
+        g2.fillRoundRect(0, 0, width - 1, height - 1, radius, radius)
+        g2.dispose()
+    }
+}

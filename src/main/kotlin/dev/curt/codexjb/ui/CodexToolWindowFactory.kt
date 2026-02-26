@@ -20,6 +20,7 @@ import kotlin.io.path.exists
 import javax.swing.DefaultComboBoxModel
 import javax.swing.DefaultListCellRenderer
 import javax.swing.JCheckBox
+import javax.swing.JButton
 import javax.swing.JComboBox
 import javax.swing.JLabel
 import javax.swing.JPanel
@@ -678,10 +679,15 @@ class CodexToolWindowFactory : ToolWindowFactory {
       SwingUtilities.invokeLater { toolWindow.show(null) }
     }
 
-    // TODO: Implement approval handling with JSON-RPC protocol
-    // Approvals are now handled server-side via AppServerClient approval handlers
-
-    // TODO: Add reset approvals button back when approval handling is implemented
+    val resetApprovalsButton = JButton("Reset approvals").apply {
+      toolTipText = "Clear remembered approval decisions for this session"
+      addActionListener {
+        protocol.resetApprovalDecisions()
+        infoBanner.show("Approval decisions reset")
+      }
+      accessibleContext.accessibleName = "Reset remembered approval decisions"
+    }
+    header.add(resetApprovalsButton)
 
     // Session header and token usage indicators
     val sessionLabel = JLabel("")

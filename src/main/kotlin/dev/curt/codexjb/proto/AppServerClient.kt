@@ -136,6 +136,64 @@ class AppServerClient(
     }
 
     /**
+     * List MCP tools using the JSON-RPC app server.
+     * Supports both camelCase and snake_case method variants for compatibility.
+     */
+    fun listMcpTools(conversationId: String?): CompletableFuture<JsonElement> {
+        val params = JsonObject().apply {
+            if (!conversationId.isNullOrBlank()) addProperty("conversationId", conversationId)
+        }
+        return sendRequestWithFallback(listOf("listMcpTools", "list_mcp_tools"), params)
+    }
+
+    /**
+     * List custom prompts using the JSON-RPC app server.
+     * Supports both camelCase and snake_case method variants for compatibility.
+     */
+    fun listCustomPrompts(conversationId: String?): CompletableFuture<JsonElement> {
+        val params = JsonObject().apply {
+            if (!conversationId.isNullOrBlank()) addProperty("conversationId", conversationId)
+        }
+        return sendRequestWithFallback(listOf("listCustomPrompts", "list_custom_prompts"), params)
+    }
+
+    /**
+     * Run an MCP tool. Falls back across common method name variants.
+     */
+    fun runMcpTool(conversationId: String?, toolName: String): CompletableFuture<JsonElement> {
+        val params = JsonObject().apply {
+            if (!conversationId.isNullOrBlank()) addProperty("conversationId", conversationId)
+            addProperty("tool", toolName)
+            addProperty("name", toolName)
+        }
+        return sendRequestWithFallback(listOf("runMcpTool", "run_mcp_tool", "callMcpTool", "call_mcp_tool"), params)
+    }
+
+    private fun sendRequestWithFallback(methods: List<String>, params: JsonObject?): CompletableFuture<JsonElement> {
+        require(methods.isNotEmpty()) { "At least one method name must be provided" }
+        val result = CompletableFuture<JsonElement>()
+
+        fun attempt(index: Int, lastError: Throwable?) {
+            if (index >= methods.size) {
+                result.completeExceptionally(lastError ?: IllegalStateException("No methods attempted"))
+                return
+            }
+
+            sendRequest(methods[index], params)
+                .whenComplete { value, error ->
+                    when {
+                        error == null -> result.complete(value)
+                        index < methods.lastIndex -> attempt(index + 1, error)
+                        else -> result.completeExceptionally(error)
+                    }
+                }
+        }
+
+        attempt(0, null)
+        return result
+    }
+
+    /**
      * Send a JSON-RPC request and return a future for the response.
      */
     private fun sendRequest(method: String, params: JsonObject?): CompletableFuture<JsonElement> {
