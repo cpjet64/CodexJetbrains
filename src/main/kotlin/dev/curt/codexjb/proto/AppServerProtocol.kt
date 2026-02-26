@@ -145,7 +145,7 @@ class AppServerProtocol(
             .thenCompose { initResp ->
                 log.info("Initialized: ${initResp.userAgent}")
 
-                // Create a new conversation
+                // Start a thread (v2-first with legacy fallback)
                 val params = NewConversationParams(
                     model = null, // Use default
                     cwd = processConfig.workingDirectory?.toString(),
@@ -153,18 +153,25 @@ class AppServerProtocol(
                     sandbox = "workspace-write"
                 )
 
-                appClient.newConversation(params)
+                appClient.threadStart(params)
             }
-            .thenCompose { convResp ->
-                log.info("Conversation created with ID: ${convResp.conversationId}")
-                currentConversationId = convResp.conversationId
+            .thenCompose { threadResp ->
+                log.info("Thread started with ID: ${threadResp.threadId}")
+                currentConversationId = threadResp.threadId
                 log.info("Stored conversationId for subsequent messages: $currentConversationId")
 
-                // Subscribe to events
-                appClient.addConversationListener(convResp.conversationId)
+                // Legacy event subscription call (v2 typically auto-subscribes).
+                // Do not fail startup if this endpoint is unavailable.
+                appClient.addConversationListener(threadResp.threadId)
+                    .exceptionally { err ->
+                        log.info("addConversationListener unavailable or failed: ${err.message}")
+                        ""
+                    }
             }
             .thenApply { subscriptionId ->
-                log.info("Subscribed to events: $subscriptionId")
+                if (subscriptionId.isNotBlank()) {
+                    log.info("Subscribed to events: $subscriptionId")
+                }
                 currentConversationId!!
             }
     }

@@ -15,17 +15,19 @@ import java.util.concurrent.atomic.AtomicInteger
 /**
  * App Server client that communicates with Codex CLI using JSON-RPC protocol over stdin/stdout.
  *
- * Protocol flow:
+ * Protocol flow (V2-first with legacy fallback):
  * 1. initialize → response → initialized notification
- * 2. newConversation → response with conversationId
- * 3. addConversationListener → response with subscriptionId
- * 4. sendUserMessage → events stream via notifications
- * 5. Handle server requests (execCommandApproval, applyPatchApproval)
+ * 2. thread/start (fallback: newConversation)
+ * 3. turn/start (fallback: sendUserMessage)
+ * 4. stream events via notifications (turn and item namespaces, or legacy codex/event namespace)
+ * 5. handle server requests (v2 item approvals + legacy approval requests)
  */
 class AppServerClient(
     private val stdin: BufferedWriter,
     private val eventBus: EventBus
 ) {
+    private data class RequestAttempt(val method: String, val params: JsonObject?)
+
     private val log: LogSink = CodexLogger.forClass(AppServerClient::class.java)
     private val nextId = AtomicInteger(1)
     private val pendingRequests = ConcurrentHashMap<RequestId, CompletableFuture<JsonElement>>()
@@ -56,6 +58,10 @@ class AppServerClient(
                 addProperty("version", clientVersion)
             }
             add("clientInfo", clientInfo)
+            val capabilities = JsonObject().apply {
+                addProperty("experimentalApi", true)
+            }
+            add("capabilities", capabilities)
         }
 
         return sendRequest("initialize", params).thenApply { result ->
@@ -69,23 +75,54 @@ class AppServerClient(
     }
 
     /**
-     * Create a new conversation.
+     * Start a thread (V2). Falls back to legacy newConversation.
      */
-    fun newConversation(params: NewConversationParams): CompletableFuture<NewConversationResponse> {
-        val jsonParams = JsonObject().apply {
+    fun threadStart(params: NewConversationParams): CompletableFuture<ThreadStartResponse> {
+        val v2Params = JsonObject().apply {
             params.model?.let { addProperty("model", it) }
             params.cwd?.let { addProperty("cwd", it) }
             params.approvalPolicy?.let { addProperty("approvalPolicy", it) }
             params.sandbox?.let { addProperty("sandbox", it) }
         }
 
-        return sendRequest("newConversation", jsonParams).thenApply { result ->
+        return sendRequestWithFallbackAttempts(
+            listOf(
+                RequestAttempt("thread/start", v2Params),
+                RequestAttempt("threadStart", v2Params),
+                RequestAttempt(
+                    "newConversation",
+                    JsonObject().apply {
+                        params.model?.let { addProperty("model", it) }
+                        params.cwd?.let { addProperty("cwd", it) }
+                        params.approvalPolicy?.let { addProperty("approvalPolicy", it) }
+                        params.sandbox?.let { addProperty("sandbox", it) }
+                    }
+                )
+            )
+        ).thenApply { result ->
             val obj = result.asJsonObject
-            val conversationId = obj["conversationId"]?.asString ?: error("Missing conversationId")
-            val model = obj["model"]?.asString ?: ""
+            val threadObj = obj["thread"]?.takeIf { it.isJsonObject }?.asJsonObject
+            val threadId = threadObj?.get("id")?.asString
+                ?: obj["threadId"]?.asString
+                ?: obj["conversationId"]?.asString
+                ?: error("Missing thread id")
+            val model = threadObj?.get("model")?.asString ?: obj["model"]?.asString
             val rolloutPath = obj["rolloutPath"]?.asString
+            ThreadStartResponse(threadId, model, rolloutPath)
+        }
+    }
 
-            NewConversationResponse(conversationId, model, rolloutPath)
+    /**
+     * Create a new conversation.
+     * Compatibility wrapper on top of V2 thread/start.
+     */
+    fun newConversation(params: NewConversationParams): CompletableFuture<NewConversationResponse> {
+        return threadStart(params).thenApply { thread ->
+            NewConversationResponse(
+                conversationId = thread.threadId,
+                model = thread.model ?: "",
+                rolloutPath = thread.rolloutPath
+            )
         }
     }
 
@@ -104,9 +141,21 @@ class AppServerClient(
 
     /**
      * Send user message to conversation.
+     * V2-first: turn/start with input text. Falls back to legacy sendUserMessage.
      */
     fun sendUserMessage(conversationId: String, text: String): CompletableFuture<Unit> {
-        val params = JsonObject().apply {
+        val v2Params = JsonObject().apply {
+            addProperty("threadId", conversationId)
+            val input = com.google.gson.JsonArray().apply {
+                val item = JsonObject().apply {
+                    addProperty("type", "text")
+                    addProperty("text", text)
+                }
+                add(item)
+            }
+            add("input", input)
+        }
+        val legacyParams = JsonObject().apply {
             addProperty("conversationId", conversationId)
             val items = com.google.gson.JsonArray().apply {
                 val item = JsonObject().apply {
@@ -121,18 +170,34 @@ class AppServerClient(
             add("items", items)
         }
 
-        return sendRequest("sendUserMessage", params).thenApply { }
+        return sendRequestWithFallbackAttempts(
+            listOf(
+                RequestAttempt("turn/start", v2Params),
+                RequestAttempt("turnStart", v2Params),
+                RequestAttempt("sendUserMessage", legacyParams)
+            )
+        ).thenApply { }
     }
 
     /**
      * Interrupt the current conversation turn.
+     * V2-first: turn/interrupt. Falls back to legacy interruptConversation.
      */
     fun interruptConversation(conversationId: String): CompletableFuture<Unit> {
-        val params = JsonObject().apply {
+        val v2Params = JsonObject().apply {
+            addProperty("threadId", conversationId)
+        }
+        val legacyParams = JsonObject().apply {
             addProperty("conversationId", conversationId)
         }
 
-        return sendRequest("interruptConversation", params).thenApply { }
+        return sendRequestWithFallbackAttempts(
+            listOf(
+                RequestAttempt("turn/interrupt", v2Params),
+                RequestAttempt("turnInterrupt", v2Params),
+                RequestAttempt("interruptConversation", legacyParams)
+            )
+        ).thenApply { }
     }
 
     /**
@@ -169,21 +234,128 @@ class AppServerClient(
         return sendRequestWithFallback(listOf("runMcpTool", "run_mcp_tool", "callMcpTool", "call_mcp_tool"), params)
     }
 
+    fun modelList(includeHidden: Boolean = false, limit: Int? = null): CompletableFuture<JsonElement> {
+        val params = JsonObject().apply {
+            addProperty("includeHidden", includeHidden)
+            limit?.let { addProperty("limit", it) }
+        }
+        return sendRequestWithFallback(listOf("model/list", "modelList"), params)
+    }
+
+    fun appList(
+        threadId: String? = null,
+        cursor: String? = null,
+        limit: Int? = null,
+        forceRefetch: Boolean? = null
+    ): CompletableFuture<JsonElement> {
+        val params = JsonObject().apply {
+            threadId?.let { addProperty("threadId", it) }
+            cursor?.let { addProperty("cursor", it) }
+            limit?.let { addProperty("limit", it) }
+            forceRefetch?.let { addProperty("forceRefetch", it) }
+        }
+        return sendRequestWithFallback(listOf("app/list", "appList"), params)
+    }
+
+    fun skillsList(cwds: List<String>? = null, forceReload: Boolean? = null): CompletableFuture<JsonElement> {
+        val params = JsonObject().apply {
+            cwds?.let {
+                val arr = com.google.gson.JsonArray()
+                it.forEach(arr::add)
+                add("cwds", arr)
+            }
+            forceReload?.let { addProperty("forceReload", it) }
+        }
+        return sendRequestWithFallback(listOf("skills/list", "skillsList"), params)
+    }
+
+    fun mcpServerStatusList(cursor: String? = null, limit: Int? = null): CompletableFuture<JsonElement> {
+        val params = JsonObject().apply {
+            cursor?.let { addProperty("cursor", it) }
+            limit?.let { addProperty("limit", it) }
+        }
+        return sendRequestWithFallback(listOf("mcpServerStatus/list", "mcpServerStatusList"), params)
+    }
+
+    fun configRead(includeLayers: Boolean? = null): CompletableFuture<JsonElement> {
+        val params = JsonObject().apply {
+            includeLayers?.let { addProperty("includeLayers", it) }
+        }
+        return sendRequestWithFallback(listOf("config/read", "configRead"), params)
+    }
+
+    fun configValueWrite(keyPath: String, value: JsonElement, mergeStrategy: String? = null): CompletableFuture<JsonElement> {
+        val params = JsonObject().apply {
+            addProperty("keyPath", keyPath)
+            add("value", value)
+            mergeStrategy?.let { addProperty("mergeStrategy", it) }
+        }
+        return sendRequestWithFallback(listOf("config/value/write", "configValueWrite"), params)
+    }
+
+    fun configBatchWrite(edits: com.google.gson.JsonArray): CompletableFuture<JsonElement> {
+        val params = JsonObject().apply {
+            add("edits", edits)
+        }
+        return sendRequestWithFallback(listOf("config/batchWrite", "configBatchWrite"), params)
+    }
+
+    fun accountRead(refreshToken: Boolean? = null): CompletableFuture<JsonElement> {
+        val params = JsonObject().apply {
+            refreshToken?.let { addProperty("refreshToken", it) }
+        }
+        return sendRequestWithFallback(listOf("account/read", "accountRead"), params)
+    }
+
+    fun accountLoginStart(params: JsonObject): CompletableFuture<JsonElement> =
+        sendRequestWithFallback(listOf("account/login/start", "accountLoginStart"), params)
+
+    fun accountLogout(): CompletableFuture<JsonElement> =
+        sendRequestWithFallback(listOf("account/logout", "accountLogout"), JsonObject())
+
+    fun accountRateLimitsRead(): CompletableFuture<JsonElement> =
+        sendRequestWithFallback(listOf("account/rateLimits/read", "accountRateLimitsRead"), JsonObject())
+
+    fun commandExec(command: List<String>, cwd: String? = null): CompletableFuture<JsonElement> {
+        val params = JsonObject().apply {
+            val cmd = com.google.gson.JsonArray()
+            command.forEach(cmd::add)
+            add("command", cmd)
+            cwd?.let { addProperty("cwd", it) }
+        }
+        return sendRequestWithFallback(listOf("command/exec", "commandExec"), params)
+    }
+
+    fun reviewStart(threadId: String): CompletableFuture<JsonElement> {
+        val params = JsonObject().apply {
+            addProperty("threadId", threadId)
+        }
+        return sendRequestWithFallback(listOf("review/start", "reviewStart"), params)
+    }
+
+    fun toolRequestUserInput(params: JsonObject): CompletableFuture<JsonElement> =
+        sendRequestWithFallback(listOf("tool/requestUserInput", "toolRequestUserInput"), params)
+
     private fun sendRequestWithFallback(methods: List<String>, params: JsonObject?): CompletableFuture<JsonElement> {
-        require(methods.isNotEmpty()) { "At least one method name must be provided" }
+        return sendRequestWithFallbackAttempts(methods.map { RequestAttempt(it, params) })
+    }
+
+    private fun sendRequestWithFallbackAttempts(attempts: List<RequestAttempt>): CompletableFuture<JsonElement> {
+        require(attempts.isNotEmpty()) { "At least one request attempt must be provided" }
         val result = CompletableFuture<JsonElement>()
 
         fun attempt(index: Int, lastError: Throwable?) {
-            if (index >= methods.size) {
+            if (index >= attempts.size) {
                 result.completeExceptionally(lastError ?: IllegalStateException("No methods attempted"))
                 return
             }
 
-            sendRequest(methods[index], params)
+            val next = attempts[index]
+            sendRequest(next.method, next.params)
                 .whenComplete { value, error ->
                     when {
                         error == null -> result.complete(value)
-                        index < methods.lastIndex -> attempt(index + 1, error)
+                        index < attempts.lastIndex -> attempt(index + 1, error)
                         else -> result.completeExceptionally(error)
                     }
                 }
@@ -266,11 +438,17 @@ class AppServerClient(
      * Handle a server-initiated request (approval).
      */
     private fun handleServerRequest(req: JsonRpcRequest) {
-        ApplicationManager.getApplication().executeOnPooledThread {
+        val runner: (() -> Unit) -> Unit = { block ->
+            val app = runCatching { ApplicationManager.getApplication() }.getOrNull()
+            if (app != null) app.executeOnPooledThread { block() } else block()
+        }
+        runner {
             try {
                 when (req.method) {
                     "execCommandApproval" -> handleExecApproval(req)
                     "applyPatchApproval" -> handlePatchApproval(req)
+                    "item/commandExecution/requestApproval" -> handleExecApprovalV2(req)
+                    "item/fileChange/requestApproval" -> handlePatchApprovalV2(req)
                     else -> {
                         log.warn("Unknown server request method: ${req.method}")
                         sendErrorResponse(req.id, -32601, "Method not found")
@@ -302,7 +480,7 @@ class AppServerClient(
         val request = ExecApprovalRequest(conversationId, callId, command, cwd, reason)
         val decision = execApprovalHandler?.invoke(request) ?: ApprovalDecision.DENIED
 
-        sendApprovalResponse(req.id, decision)
+        sendApprovalResponseLegacy(req.id, decision)
     }
 
     /**
@@ -322,13 +500,52 @@ class AppServerClient(
         val request = PatchApprovalRequest(conversationId, callId, fileChanges, reason)
         val decision = patchApprovalHandler?.invoke(request) ?: ApprovalDecision.DENIED
 
-        sendApprovalResponse(req.id, decision)
+        sendApprovalResponseLegacy(req.id, decision)
     }
 
     /**
-     * Send approval decision response.
+     * Handle v2 command approval request.
      */
-    private fun sendApprovalResponse(id: RequestId, decision: ApprovalDecision) {
+    private fun handleExecApprovalV2(req: JsonRpcRequest) {
+        val params = req.params ?: run {
+            sendErrorResponse(req.id, -32602, "Invalid params")
+            return
+        }
+        val cmdArray = params["command"]?.takeIf { it.isJsonArray }?.asJsonArray
+        val command = cmdArray?.map { it.asString } ?: emptyList()
+        val cwd = params["cwd"]?.asString ?: ""
+        val reason = params["reason"]?.asString
+        val threadId = params["threadId"]?.asString ?: ""
+        val callId = params["itemId"]?.asString ?: params["callId"]?.asString ?: ""
+
+        val request = ExecApprovalRequest(threadId, callId, command, cwd, reason)
+        val decision = execApprovalHandler?.invoke(request) ?: ApprovalDecision.DENIED
+        sendApprovalResponseV2(req.id, decision)
+    }
+
+    /**
+     * Handle v2 file change approval request.
+     */
+    private fun handlePatchApprovalV2(req: JsonRpcRequest) {
+        val params = req.params ?: run {
+            sendErrorResponse(req.id, -32602, "Invalid params")
+            return
+        }
+        val threadId = params["threadId"]?.asString ?: ""
+        val callId = params["itemId"]?.asString ?: params["callId"]?.asString ?: ""
+        val reason = params["reason"]?.asString
+
+        val changesObj = JsonObject().apply {
+            params["changes"]?.let { add("changes", it) }
+            params["grantRoot"]?.let { add("grantRoot", it) }
+        }
+
+        val request = PatchApprovalRequest(threadId, callId, changesObj, reason)
+        val decision = patchApprovalHandler?.invoke(request) ?: ApprovalDecision.DENIED
+        sendApprovalResponseV2(req.id, decision)
+    }
+
+    private fun sendApprovalResponseLegacy(id: RequestId, decision: ApprovalDecision) {
         val result = JsonObject().apply {
             addProperty("decision", decision.value)
         }
@@ -343,6 +560,29 @@ class AppServerClient(
             }
         } catch (e: IOException) {
             log.error("Failed to send approval response: ${e.message}")
+        }
+    }
+
+    private fun sendApprovalResponseV2(id: RequestId, decision: ApprovalDecision) {
+        val mapped = when (decision) {
+            ApprovalDecision.APPROVED -> "accept"
+            ApprovalDecision.APPROVED_FOR_SESSION -> "acceptForSession"
+            ApprovalDecision.DENIED -> "decline"
+            ApprovalDecision.ABORT -> "cancel"
+        }
+        val result = JsonObject().apply {
+            addProperty("decision", mapped)
+        }
+        val response = JsonRpcResponse(id, result)
+        val json = JsonRpcParser.encodeResponse(response)
+        try {
+            synchronized(stdin) {
+                stdin.write(json)
+                stdin.write("\n")
+                stdin.flush()
+            }
+        } catch (e: IOException) {
+            log.error("Failed to send v2 approval response: ${e.message}")
         }
     }
 
@@ -381,6 +621,88 @@ class AppServerClient(
 
                 eventBus.dispatchEvent(id, msg)
             }
+            note.method == "turn/started" -> {
+                val turnId = note.params?.getAsJsonObject("turn")?.get("id")?.asString
+                    ?: note.params?.get("turnId")?.asString
+                    ?: ""
+                dispatchTypedEvent(turnId, "task_started")
+            }
+            note.method == "turn/completed" -> {
+                val turnId = note.params?.getAsJsonObject("turn")?.get("id")?.asString
+                    ?: note.params?.get("turnId")?.asString
+                    ?: ""
+                dispatchTypedEvent(turnId, "task_complete")
+            }
+            note.method == "turn/diff/updated" -> {
+                val turnId = note.params?.get("turnId")?.asString ?: ""
+                val diffEl = note.params?.get("diff")
+                val diffText = when {
+                    diffEl == null -> ""
+                    diffEl.isJsonPrimitive -> diffEl.asString
+                    else -> diffEl.toString()
+                }
+                dispatchTypedEvent(turnId, "turn_diff") {
+                    addProperty("diff", diffText)
+                    addProperty("text", diffText)
+                }
+            }
+            note.method == "item/agentMessage/delta" -> {
+                val turnId = note.params?.get("turnId")?.asString ?: ""
+                val delta = note.params?.get("delta")?.asString
+                    ?: note.params?.get("textDelta")?.asString
+                    ?: ""
+                dispatchTypedEvent(turnId, "AgentMessageDelta") {
+                    addProperty("delta", delta)
+                }
+            }
+            note.method == "item/reasoning/textDelta" || note.method == "item/reasoning/summaryTextDelta" -> {
+                val turnId = note.params?.get("turnId")?.asString ?: ""
+                val delta = note.params?.get("delta")?.asString
+                    ?: note.params?.get("textDelta")?.asString
+                    ?: ""
+                dispatchTypedEvent(turnId, "agent_reasoning_delta") {
+                    addProperty("delta", delta)
+                }
+            }
+            note.method == "item/reasoning/summaryPartAdded" -> {
+                val turnId = note.params?.get("turnId")?.asString ?: ""
+                dispatchTypedEvent(turnId, "agent_reasoning_section_break")
+            }
+            note.method == "item/started" -> {
+                val turnId = note.params?.get("turnId")?.asString ?: ""
+                val item = note.params?.getAsJsonObject("item")
+                val itemType = item?.get("type")?.asString
+                if (itemType == "mcpToolCall") {
+                    dispatchTypedEvent(turnId, "mcp_tool_call_begin") {
+                        val invocation = JsonObject().apply {
+                            add("tool", item.get("tool"))
+                            add("server", item.get("server"))
+                            add("name", item.get("tool"))
+                        }
+                        add("invocation", invocation)
+                    }
+                }
+            }
+            note.method == "item/completed" -> {
+                val turnId = note.params?.get("turnId")?.asString ?: ""
+                val item = note.params?.getAsJsonObject("item")
+                val itemType = item?.get("type")?.asString
+                when (itemType) {
+                    "agentMessage" -> dispatchTypedEvent(turnId, "AgentMessage")
+                    "mcpToolCall" -> {
+                        dispatchTypedEvent(turnId, "mcp_tool_call_end") {
+                            val invocation = JsonObject().apply {
+                                add("tool", item.get("tool"))
+                                add("server", item.get("server"))
+                                add("name", item.get("tool"))
+                            }
+                            add("invocation", invocation)
+                            item.get("result")?.let { add("result", it) }
+                            item.get("error")?.let { add("error", it) }
+                        }
+                    }
+                }
+            }
             note.method == "sessionConfigured" -> {
                 log.info("← sessionConfigured")
                 val params = note.params ?: JsonObject()
@@ -390,6 +712,14 @@ class AppServerClient(
                 log.info("← notification: ${note.method}")
             }
         }
+    }
+
+    private fun dispatchTypedEvent(id: String, type: String, populate: (JsonObject.() -> Unit)? = null) {
+        val msg = JsonObject().apply {
+            addProperty("type", type)
+            if (populate != null) populate()
+        }
+        eventBus.dispatchEvent(id, msg)
     }
 }
 
@@ -409,6 +739,12 @@ data class NewConversationParams(
 data class NewConversationResponse(
     val conversationId: String,
     val model: String,
+    val rolloutPath: String?
+)
+
+data class ThreadStartResponse(
+    val threadId: String,
+    val model: String?,
     val rolloutPath: String?
 )
 
