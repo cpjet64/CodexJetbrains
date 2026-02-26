@@ -20,6 +20,10 @@ Backlog source: `TODO_JetBrains.md`
   - NOTICE + license validation output
   - privacy/security/support disclosure docs
   - README/changelog/quick-start/settings guide refresh
+- M6 post-release operations documentation is complete:
+  - monitoring playbook
+  - roadmap
+  - release retrospective template/scheduling guidance
 - M1 backlog normalization is complete:
   - SSOT declared as `TODO_JetBrains.md`
   - parity completion checklist contradictions corrected
@@ -117,6 +121,18 @@ Tracker updates:
 - Marked F1.1-F1.5 complete in `TODO_JetBrains.md`.
 - Marked F4.1-F4.4 and F4.6 complete in `TODO_JetBrains.md`.
 - Marked first three M5 checklist items complete in `masterchecklist.md`.
+
+### Batch: M6 post-release operations docs (complete)
+
+Changes:
+- Added `docs/operations-playbook.md` for monitoring/triage/escalation workflows.
+- Added `docs/roadmap.md` with near/mid/long-term milestones.
+- Added `docs/release-retrospective.md` template with scheduling guidance.
+- Confirmed existing issue templates + `CONTRIBUTING.md` satisfy release guidance task.
+
+Tracker updates:
+- Marked F6.1-F6.4 complete in `TODO_JetBrains.md`.
+- Marked all M6 checklist items complete in `masterchecklist.md`.
 
 ### Batch: F3.5 CI workflow review (complete)
 

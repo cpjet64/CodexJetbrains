@@ -65,10 +65,10 @@ Sources
 - [ ] [F5.5] Validate JetBrains account publisher profile and upload permissions.
 - [ ] [F5.6] Plan release cadence (alpha/beta/stable) and set milestone dates.
 
-- [ ] [F6.1] Define monitoring plan for diagnostics, telemetry, and failure alerts.
-- [ ] [F6.2] Create issue templates and contribution guidelines for release.
-- [ ] [F6.3] Outline roadmap for next milestones (settings UI polish, IDE support).
-- [ ] [F6.4] Schedule retrospective once marketplace submission is accepted.
+- [x] [F6.1] Define monitoring plan for diagnostics, telemetry, and failure alerts.
+- [x] [F6.2] Create issue templates and contribution guidelines for release.
+- [x] [F6.3] Outline roadmap for next milestones (settings UI polish, IDE support).
+- [x] [F6.4] Schedule retrospective once marketplace submission is accepted.
 
 ## B. VS Code parity (v1.0.0) — phase-level tracking
 

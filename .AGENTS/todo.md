@@ -16,7 +16,7 @@
 - [x] Refresh README links and normalize JDK references to 21.
 - [x] Add changelog, quick-start, settings guide, and release tracker.
 - [x] Sync `TODO_JetBrains.md`, `masterchecklist.md`, `execution-plan.md`, and progress log.
-- [ ] Commit and push this batch.
+- [x] Commit and push this batch.
 
 ## Active Run: Orchestrator + Backlog Normalization
 
@@ -58,7 +58,21 @@
 
 ## Review (in progress): M5 Legal/Docs Readiness Batch
 
-- Status: implementation complete; commit pending.
+- Status: implementation complete.
 - Notes:
   - Completed F1.1-F1.5 and F4.1-F4.4/F4.6 documentation tasks from TODO backlog.
   - Remaining M5 scope is marketplace asset prep and publisher/release-cadence validation.
+
+## Active Run: M6 Post-Release Operations Docs
+
+- [x] Add monitoring/diagnostics/failure-alert playbook.
+- [x] Publish near-term roadmap document.
+- [x] Add retrospective template and schedule guidance.
+- [x] Confirm issue templates + contribution guidance coverage.
+- [ ] Commit this batch.
+
+## Review (in progress): M6 Post-Release Operations Docs
+
+- Status: implementation complete; commit pending.
+- Notes:
+  - Completed F6.1-F6.4 with documentation and tracker updates.

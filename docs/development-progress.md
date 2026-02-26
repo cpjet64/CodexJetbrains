@@ -17,6 +17,7 @@
 - [x] Phase K next implementation batch (F3.1/F3.2 closure) completed.
 - [ ] Phase L next implementation batch (remaining M3/M4) pending.
 - [x] Phase M doc/legal readiness batch (F1.1-F1.5, F4.1-F4.4, F4.6) completed.
+- [x] Phase N post-release operations docs batch (F6.1-F6.4) completed.
 
 ### Completed Batch
 
@@ -43,3 +44,5 @@
 - Added release/readme docs: `CHANGELOG.md`, `todo-release.md`, `docs/quick-start.md`,
   and `docs/settings-guide.md`.
 - Updated stale JDK references in docs to JDK 21.
+- Added post-release operations docs: `docs/operations-playbook.md`, `docs/roadmap.md`,
+  and `docs/release-retrospective.md`.

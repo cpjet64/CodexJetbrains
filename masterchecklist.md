@@ -55,7 +55,7 @@ Legend:
 
 ## M6. Post-Release Operations (F6)
 
-- [ ] Define monitoring/diagnostics/failure-alert playbook.
-- [ ] Finalize issue templates and contribution guidance.
-- [ ] Publish near-term roadmap update.
-- [ ] Schedule and document release retrospective.
+- [x] Define monitoring/diagnostics/failure-alert playbook.
+- [x] Finalize issue templates and contribution guidance.
+- [x] Publish near-term roadmap update.
+- [x] Schedule and document release retrospective.
