@@ -5,7 +5,7 @@ Thanks for helping shape Codex for JetBrains! This guide summarizes the project 
 
 ## Before You Start
 - Review `TODO_JetBrains.md` to understand outstanding tasks and their current status.
-- Configure `JAVA_HOME` to JDK 17 before running Gradle tasks.
+- Configure `JAVA_HOME` to JDK 21 before running Gradle tasks.
 - Install the Codex CLI and ensure it is reachable from your shell for end-to-end testing.
 
 ## Workflow

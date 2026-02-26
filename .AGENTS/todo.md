@@ -9,6 +9,15 @@
 - [x] Add/extend tests for V2 lifecycle and notification/approval mapping.
 - [x] Run verification (`test`, `buildPlugin`, `verifyPlugin`) and commit atomically.
 
+## Active Run: M5 Legal/Docs Readiness Batch
+
+- [x] Add NOTICE and dependency license validation output.
+- [x] Add privacy/security/support disclosure docs.
+- [x] Refresh README links and normalize JDK references to 21.
+- [x] Add changelog, quick-start, settings guide, and release tracker.
+- [x] Sync `TODO_JetBrains.md`, `masterchecklist.md`, `execution-plan.md`, and progress log.
+- [ ] Commit and push this batch.
+
 ## Active Run: Orchestrator + Backlog Normalization
 
 - [x] Audit current planning docs and tracker freshness post-push.
@@ -46,3 +55,10 @@
   - Added App Server surface wrappers for models/apps/skills/mcp status/config/account/command/review/tool-input endpoints.
   - Added `AppServerClientV2Test` coverage for V2 notifications and approval response shape.
   - Legacy compatibility remains required while Codex versions vary.
+
+## Review (in progress): M5 Legal/Docs Readiness Batch
+
+- Status: implementation complete; commit pending.
+- Notes:
+  - Completed F1.1-F1.5 and F4.1-F4.4/F4.6 documentation tasks from TODO backlog.
+  - Remaining M5 scope is marketplace asset prep and publisher/release-cadence validation.

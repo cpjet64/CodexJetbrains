@@ -142,7 +142,7 @@ To help diagnose IDE-level crashes:
 - From a terminal, confirm the CLI works independently: `codex --version` and `codex whoami`.
 
 ## Development Workflow
-- Keep `JAVA_HOME` aligned with JDK 17; run `scripts/dev/check-java.ps1` (Windows) or
+- Keep `JAVA_HOME` aligned with JDK 21; run `scripts/dev/check-java.ps1` (Windows) or
   `scripts/dev/check-java.sh` (Unix) if you are unsure.
 - Execute `./gradlew test` before committing; add focused tests when touching UI or protocol
   logic.
@@ -154,6 +154,7 @@ To help diagnose IDE-level crashes:
 ## Releasing
 - Versioning follows semver. See `RELEASING.md` for tagging policy and step-by-step instructions.
 - Draft release notes using `RELEASE_NOTES_TEMPLATE.md` and attach artifacts from CI.
+- See `CHANGELOG.md` and `todo-release.md` for current release readiness status.
 
 ## Repository Layout
 - `src/main/kotlin` - plugin sources grouped by feature packages (`core`, `proto`, `ui`).
@@ -166,5 +167,13 @@ To help diagnose IDE-level crashes:
 Please read `CONTRIBUTING.md` for coding style, testing expectations, and pull request
 etiquette. External contributions are welcome while the project is still stabilizing.
 
+## Documentation Index
+- Quick start: `docs/quick-start.md`
+- Settings guide: `docs/settings-guide.md`
+- Security policy: `SECURITY.md`
+- Privacy statement/disclaimer: `PRIVACY.md`
+- Support channels: `SUPPORT.md`
+- Third-party notices: `NOTICE`
+
 ## License
-The project is distributed under the Apache License 2.0. See `LICENSE` for details.
+The project is distributed under the Apache License 2.0. See `LICENSE` and `NOTICE` for details.

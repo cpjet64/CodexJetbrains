@@ -1,0 +1,19 @@
+CodexJetbrains
+Copyright 2025 CodexJetbrains Contributors
+
+This product includes software developed by the CodexJetbrains contributors and is
+licensed under the Apache License, Version 2.0.
+
+Third-party components used directly by this project include:
+
+- Gson (com.google.code.gson:gson), Apache License 2.0
+- JUnit 4 (junit:junit), Eclipse Public License 1.0
+- JUnit Jupiter API/Engine (org.junit.jupiter:*), Eclipse Public License 2.0
+- JUnit Vintage Engine (org.junit.vintage:*), Eclipse Public License 2.0
+- OpenTest4J (org.opentest4j:opentest4j), Apache License 2.0
+
+IntelliJ Platform and bundled plugins are provided by JetBrains and distributed under
+JetBrains terms. They are not redistributed as standalone third-party binaries by this
+repository outside normal plugin build/test workflows.
+
+This NOTICE file is provided for attribution and informational purposes only.

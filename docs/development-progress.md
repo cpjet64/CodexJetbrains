@@ -16,6 +16,7 @@
 - [x] Phase J next implementation batch (F3.7 perf baseline) completed.
 - [x] Phase K next implementation batch (F3.1/F3.2 closure) completed.
 - [ ] Phase L next implementation batch (remaining M3/M4) pending.
+- [x] Phase M doc/legal readiness batch (F1.1-F1.5, F4.1-F4.4, F4.6) completed.
 
 ### Completed Batch
 
@@ -37,3 +38,8 @@
 - Added explicit manual release checklist in `RELEASING.md`.
 - Baseline benchmark captured in `perf.csv` (`gradlew buildPlugin` duration).
 - Added `docs/test-plan.md` for reconnect/approvals/diff/MCP release validation.
+- Added legal/readiness docs: `NOTICE`, `docs/license-validation.md`, `PRIVACY.md`,
+  `SECURITY.md`, and `SUPPORT.md`.
+- Added release/readme docs: `CHANGELOG.md`, `todo-release.md`, `docs/quick-start.md`,
+  and `docs/settings-guide.md`.
+- Updated stale JDK references in docs to JDK 21.

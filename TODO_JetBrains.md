@@ -28,11 +28,11 @@ Sources
 - [x] [F0.4] Resolve unused parameter warnings surfaced by buildPlugin (rename to _id).
 - [x] [F0.5] Replace deprecated IntelliJ API calls noted in buildPlugin output.
 
-- [ ] [F1.1] Add NOTICE file referencing Apache 2.0 usage and third-party licenses.
-- [ ] [F1.2] Update README and docs to mention Apache 2.0 and link to NOTICE.
-- [ ] [F1.3] Validate bundled deps (e.g., gson) for license compatibility.
-- [ ] [F1.4] Draft privacy statement and usage disclaimer for marketplace listing.
-- [ ] [F1.5] Define support contact and security disclosure channel for submission forms.
+- [x] [F1.1] Add NOTICE file referencing Apache 2.0 usage and third-party licenses.
+- [x] [F1.2] Update README and docs to mention Apache 2.0 and link to NOTICE.
+- [x] [F1.3] Validate bundled deps (e.g., gson) for license compatibility.
+- [x] [F1.4] Draft privacy statement and usage disclaimer for marketplace listing.
+- [x] [F1.5] Define support contact and security disclosure channel for submission forms.
 
 - [x] [F2.1] Re-run ./gradlew buildPlugin after metadata/icon work to ensure clean output.
 - [ ] [F2.2] Smoke install ZIP in IntelliJ IDEA 2025.2 (Windows) and capture screenshots.
@@ -51,12 +51,12 @@ Sources
 - [x] [F3.6] Add publishing workflow (sign, upload ZIP) or document manual release process.
 - [x] [F3.7] Capture performance benchmarks (perf.csv) after final build for regressions.
 
-- [ ] [F4.1] Refresh README with install instructions, feature matrix, troubleshooting.
-- [ ] [F4.2] Create CHANGELOG.md entry for 0.1.0 with key features and known gaps.
-- [ ] [F4.3] Update todo-release.md to reflect blockers resolved and remaining steps.
-- [ ] [F4.4] Produce quick-start guide or FAQ covering CLI setup and approvals workflow.
+- [x] [F4.1] Refresh README with install instructions, feature matrix, troubleshooting.
+- [x] [F4.2] Create CHANGELOG.md entry for 0.1.0 with key features and known gaps.
+- [x] [F4.3] Update todo-release.md to reflect blockers resolved and remaining steps.
+- [x] [F4.4] Produce quick-start guide or FAQ covering CLI setup and approvals workflow.
 - [ ] [F4.5] Prepare demo GIFs/screen recordings for marketplace gallery and README.
-- [ ] [F4.6] Document configuration knobs (CLI path, WSL, approvals) in settings guide.
+- [x] [F4.6] Document configuration knobs (CLI path, WSL, approvals) in settings guide.
 
 - [ ] [F5.1] Set plugin version, name, and change notes aligned with JetBrains rules.
 - [ ] [F5.2] Collect marketplace assets (icon 128/512, header, screenshots, video).

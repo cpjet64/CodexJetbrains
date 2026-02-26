@@ -47,9 +47,9 @@ Legend:
 
 ## M5. Legal, Docs, and Marketplace Readiness (F1/F4/F5)
 
-- [ ] Add NOTICE and dependency license validation outputs.
-- [ ] Add privacy statement, disclaimer, support, and security disclosure channel.
-- [ ] Refresh README, changelog, quick-start/FAQ, and settings guide.
+- [x] Add NOTICE and dependency license validation outputs.
+- [x] Add privacy statement, disclaimer, support, and security disclosure channel.
+- [x] Refresh README, changelog, quick-start/FAQ, and settings guide.
 - [ ] Prepare marketplace assets and listing copy.
 - [ ] Validate publisher permissions and release cadence.
 

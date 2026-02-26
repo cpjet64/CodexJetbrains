@@ -16,6 +16,10 @@ Backlog source: `TODO_JetBrains.md`
 
 - Canonical planning docs are in place and synchronized.
 - M2 (protocol + approvals technical debt) is complete.
+- M5 documentation/legal tranche is now partially complete:
+  - NOTICE + license validation output
+  - privacy/security/support disclosure docs
+  - README/changelog/quick-start/settings guide refresh
 - M1 backlog normalization is complete:
   - SSOT declared as `TODO_JetBrains.md`
   - parity completion checklist contradictions corrected
@@ -98,6 +102,21 @@ Outcome:
 - Run verification commands appropriate to touched scope and document outcomes.
 
 ## 6. Batch Notes
+
+### Batch: M5 doc/legal readiness tranche (complete for F1.1-F1.5, F4.1-F4.4, F4.6)
+
+Changes:
+- Added `NOTICE` and `docs/license-validation.md`.
+- Added `PRIVACY.md`, `SECURITY.md`, and `SUPPORT.md`.
+- Added `CHANGELOG.md` and `todo-release.md`.
+- Added `docs/quick-start.md` and `docs/settings-guide.md`.
+- Refreshed `README.md` documentation index and Apache+NOTICE references.
+- Corrected stale JDK guidance in `README.md` and `CONTRIBUTING.md` from 17 to 21.
+
+Tracker updates:
+- Marked F1.1-F1.5 complete in `TODO_JetBrains.md`.
+- Marked F4.1-F4.4 and F4.6 complete in `TODO_JetBrains.md`.
+- Marked first three M5 checklist items complete in `masterchecklist.md`.
 
 ### Batch: F3.5 CI workflow review (complete)
 
