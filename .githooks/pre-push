@@ -1,0 +1,16 @@
+#!/usr/bin/env sh
+set -eu
+
+repo_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+if [ -z "$repo_root" ]; then
+  echo "pre-push: unable to determine repository root" >&2
+  exit 1
+fi
+cd "$repo_root"
+
+if command -v just >/dev/null 2>&1; then
+  exec just ci-deep
+fi
+
+echo "pre-push: 'just' not found — skipping ci-deep" >&2
+exit 0
