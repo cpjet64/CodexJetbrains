@@ -121,3 +121,10 @@ Changes:
 - Added `ChatPanelTest.startsInIdleDefaultState` to cover default toolwindow/chat idle state.
 - Executed focused test run for `ChatPanelTest` and `PluginResourcesTest`.
 - Marked `F3.4` complete in `TODO_JetBrains.md` and `masterchecklist.md`.
+
+### Batch: F3.6 manual release process documentation (complete)
+
+Changes:
+- Expanded `RELEASING.md` with explicit manual release checklist (verification, tagging,
+  Marketplace upload, post-publish checks).
+- Marked `F3.6` complete in `TODO_JetBrains.md` and `masterchecklist.md`.

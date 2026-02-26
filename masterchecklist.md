@@ -42,7 +42,7 @@ Legend:
 - [x] F3.3 Run clean-checkout `./gradlew test` and log outcome.
 - [x] F3.4 Add targeted UI tests (icon presence and ToolWindow default state).
 - [x] F3.5 Review CI release gates.
-- [ ] F3.6 Define publish workflow or document manual release.
+- [x] F3.6 Define publish workflow or document manual release.
 - [ ] F3.7 Capture baseline performance metrics.
 
 ## M5. Legal, Docs, and Marketplace Readiness (F1/F4/F5)

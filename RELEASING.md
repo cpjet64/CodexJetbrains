@@ -26,3 +26,26 @@ This project follows Semantic Versioning (semver): `MAJOR.MINOR.PATCH`.
 - Perform the first upload manually via the JetBrains Marketplace UI to validate configuration.
 - Subsequent releases can be automated using `publishPlugin` once secrets are in place.
 
+## Manual Release Checklist (No CI Publish Job)
+
+Use this path when automated publishing is not enabled yet.
+
+1. Ensure local verification is green:
+   - `./gradlew test verifyPlugin buildPlugin`
+2. Confirm plugin metadata:
+   - `build.gradle.kts` version is correct
+   - `src/main/resources/META-INF/plugin.xml` has current notes/compatibility
+3. Build distributable:
+   - `./gradlew buildPlugin`
+   - Artifact: `build/distributions/CodexJetbrains-<version>.zip`
+4. Prepare release notes from `RELEASE_NOTES_TEMPLATE.md`.
+5. Create git tag and push tag:
+   - `git tag -a v<version> -m "Release v<version>"`
+   - `git push origin v<version>`
+6. Publish in JetBrains Marketplace UI:
+   - Upload ZIP
+   - Paste release notes
+   - Confirm channel/version metadata
+7. Post-publish checks:
+   - Verify listing displays correct version and changelog
+   - Smoke-install from Marketplace in IntelliJ IDEA 2025.2+
