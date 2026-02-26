@@ -57,6 +57,7 @@ This file provides an overview of all documentation in the repository.
 
 ### Future Roadmap (Post v1.0.0)
 - **[JETBRAINS_FULL_INTEGRATION_ROADMAP.md](JETBRAINS_FULL_INTEGRATION_ROADMAP.md)**
+| TODO_JetBrains.md | ? Active | Authoritative backlog |
   - Vision for full JetBrains IDE integration
   - 11 supported IDEs (IntelliJ, PyCharm, WebStorm, etc.)
   - 3 integration levels (Basic → Platform → IDE-Specific)
@@ -65,6 +66,7 @@ This file provides an overview of all documentation in the repository.
 ## Release Management
 
 ### Active Tasks
+- **[TODO_JetBrains.md](TODO_JetBrains.md)** - Authoritative backlog and per-task status log
 - **[todo-final.md](todo-final.md)** - Release blockers and marketplace preparation
   - Legal and policy readiness (Apache 2.0, licenses)
   - Build packaging and install verification
@@ -110,6 +112,7 @@ Located in `.github/ISSUE_TEMPLATE/`:
 | CLI_LIFECYCLE_FIXES.md | ✅ Active | Lifecycle fixes summary |
 | CODEX_LAUNCHER_STATUS.md | ✅ Active | Project decisions |
 | JETBRAINS_FULL_INTEGRATION_ROADMAP.md | ✅ Active | Future roadmap |
+| TODO_JetBrains.md | ? Active | Authoritative backlog |
 | todo-final.md | ✅ Active | Release blockers |
 | README.md | ✅ Active | Main documentation |
 | CLAUDE.md | ✅ Active | AI assistant guide |
@@ -132,9 +135,10 @@ Located in `.github/ISSUE_TEMPLATE/`:
 3. [CLAUDE.md](CLAUDE.md) - Project architecture and build commands
 
 **For Project Planning:**
-1. [VSCODE_PARITY_IMPLEMENTATION.md](VSCODE_PARITY_IMPLEMENTATION.md) - v1.0.0 (3-5 weeks)
-2. [JETBRAINS_FULL_INTEGRATION_ROADMAP.md](JETBRAINS_FULL_INTEGRATION_ROADMAP.md) - v1.1.0-v3.0.0 (18 months)
-3. [todo-final.md](todo-final.md) - Marketplace release requirements
+1. [TODO_JetBrains.md](TODO_JetBrains.md) - Authoritative backlog and status
+2. [VSCODE_PARITY_IMPLEMENTATION.md](VSCODE_PARITY_IMPLEMENTATION.md) - v1.0.0 (3-5 weeks)
+3. [JETBRAINS_FULL_INTEGRATION_ROADMAP.md](JETBRAINS_FULL_INTEGRATION_ROADMAP.md) - v1.1.0-v3.0.0 (18 months)
+4. [todo-final.md](todo-final.md) - Marketplace release requirements
 
 ## Maintenance
 
@@ -144,4 +148,4 @@ This index is maintained manually. When adding new documentation:
 3. Add quick link if applicable
 4. Keep archive section up to date
 
-Last updated: 2025-10-02
+Last updated: 2026-01-15
